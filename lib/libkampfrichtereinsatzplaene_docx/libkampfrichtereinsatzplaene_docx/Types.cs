@@ -1,0 +1,60 @@
+using System;
+using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
+
+namespace libkampfrichtereinsatzplaene_docx;
+
+public class Kampfrichter
+{
+    public string role { get; set; }
+    public string name { get; set; }
+}
+
+public class Kampfgericht
+{
+    public string table_name { get; set; }
+    public string table_kind { get; set; }
+    public bool table_is_finale { get; set; }
+    public Kampfrichter[] judges { get; set; }
+}
+
+public class Storage
+{
+    public string wk_name { get; set; }
+    public string wk_date { get; set; }
+    public string wk_place { get; set; }
+    public string wk_responsible_person { get; set; }
+    public string wk_judgesmeeting_time { get; set; }
+    public string[] wk_replacement_judges { get; set; }
+    public Kampfgericht[] wk_judgingtables { get; set; }
+}
+
+[JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(Storage))]
+internal partial class SourceGenerationContextStorage : JsonSerializerContext
+{
+}
+
+[JsonSerializable(typeof(Kampfgericht))]
+internal partial class SourceGenerationContextKampfgericht : JsonSerializerContext
+{
+}
+
+[JsonSerializable(typeof(Kampfrichter))]
+internal partial class SourceGenerationContextKampfrichter : JsonSerializerContext
+{
+}
+
+public enum ApplicationError {
+    UnknownError = -1,
+    NoError = 0,
+    MutexPoisonedError = 1,
+    JSONSerializeError = 2,
+    CStringNullError = 3,
+    MarshalJSONNullError = 4,
+    DeserializeArgumentNullError = 5,
+    DeserializeJSONError = 6,
+    DeserializeNotSupportedError = 7,
+    StorageNullError = 8,
+    MarshalSavePathNullError = 9,
+}

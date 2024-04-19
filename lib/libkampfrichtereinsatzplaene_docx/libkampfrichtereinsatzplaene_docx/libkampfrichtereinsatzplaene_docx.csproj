@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <PublishAot>true</PublishAot>
+        <OptimizationPreference>Size</OptimizationPreference>
+        <AutoreleasePoolSupport>false</AutoreleasePoolSupport>
+        <EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
+        <EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
+        <EventSourceSupport>false</EventSourceSupport>
+        <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
+        <StackTraceSupport>false</StackTraceSupport>
+        <UseNativeHttpHandler>true</UseNativeHttpHandler>
+        <UseSystemResourceKeys>true</UseSystemResourceKeys>
+        <PublishTrimmed>true</PublishTrimmed>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <OutputPath></OutputPath>
+      <DebugType>none</DebugType>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <OutputPath />
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <LinkerArg Include="-Wl,-rpath,'/usr/lib/swift'" Condition="$(RuntimeIdentifier.StartsWith('osx'))" />
+        <LinkerArg Include="-Wl,-install_name,'@executable_path/../Frameworks/libkampfrichtereinsatzplaene_docx.dylib'" Condition="$(RuntimeIdentifier.StartsWith('osx'))" />
+    </ItemGroup>
+    
+    <ItemGroup>
+      <PackageReference Include="DocumentFormat.OpenXml" Version="3.0.2" />
+    </ItemGroup>
+
+</Project>

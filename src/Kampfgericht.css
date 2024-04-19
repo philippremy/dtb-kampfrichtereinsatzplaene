@@ -1,0 +1,39 @@
+#headContainer {
+    margin-top: 10px;
+}
+
+.cardType {
+    max-width: 250px;
+}
+
+.tableInfoContainer {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.cardHeaderDiv {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.fieldContainer {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    max-width: 90%;
+}
+
+.inputType {
+    max-width: 225px;
+}
+
+.tableDialogContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 15px;
+}

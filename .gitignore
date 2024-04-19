@@ -125,3 +125,16 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# .DS_Store
+.DS_Store
+*.DS_Store
+*/.DS_Store
+
+# Library Build Products
+/lib/libkampfrichtereinsatzplaene_docx/build/*
+/lib/libkampfrichtereinsatzplaene_docx/build
+/lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/bin/*
+/lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/bin
+/lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/obj/*
+/lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/obj
