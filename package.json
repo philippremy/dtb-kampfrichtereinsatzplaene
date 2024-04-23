@@ -12,7 +12,9 @@
   "license": "MIT",
   "dependencies": {
     "@fluentui/react-components": "^9.47.5",
+    "@fluentui/react-datepicker-compat": "^0.4.32",
     "@fluentui/react-icons": "^2.0.235",
+    "@fluentui/react-timepicker-compat": "^0.2.8",
     "@tauri-apps/api": "^1.5.0",
     "path": "^0.12.7",
     "react": "^18.2.0",

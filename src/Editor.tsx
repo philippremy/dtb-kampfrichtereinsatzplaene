@@ -1,10 +1,11 @@
-import { Button, Caption2, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, FluentProvider, Input, Menu, MenuButton, MenuButtonProps, MenuItem, MenuList, MenuPopover, MenuTrigger, SplitButton, Subtitle2, webDarkTheme, webLightTheme } from "@fluentui/react-components";
-import { AddFilled, DocumentFilled, PenFilled, SaveFilled } from "@fluentui/react-icons";
+import { Button, Caption2, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, FluentProvider, Input, Link, Menu, MenuButton, MenuButtonProps, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, SplitButton, Subtitle2, Text, Toast, ToastBody, Toaster, ToastFooter, ToastIntent, ToastTitle, ToastTrigger, useToastController, webDarkTheme, webLightTheme } from "@fluentui/react-components";
+import { AddFilled, CheckmarkFilled, DocumentFilled, ErrorCircleFilled, PenFilled, SaveFilled } from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
 import "./Editor.css";
 import { v4 as uuidv4 } from 'uuid';
 import KampfgerichteRenderer from "./KampfgerichteRenderer";
+import { ask, save } from "@tauri-apps/api/dialog";
 
 // Kampfrichter Interface
 export type Kampfrichter = {
@@ -65,11 +66,50 @@ function Editor() {
         })
     }, []);
 
-    // Button stuff
-    const onClickSaveButton = () => { };
-    const primaryActionButtonProps = {
-        onClickSaveButton,
+    // Check if the user really wants to send anything to the backend!
+    async function getUserApproval() {
+        if(doublesExist) {
+            return await ask("Soll der Wettkampf trotz der bestehenden Überschneidungen gespeichert werden?", {title: "Überschneidungen gefunden"});
+        } else {
+            return true;
+        }
+    }
+
+    // This is the default button!
+    const [lastSavePath, setLastSavePath] = useState<string | undefined>(undefined);
+    async function saveWettkampf() {
+        if(!await getUserApproval()) {
+            return;
+        }
+        if(lastSavePath === undefined) {
+            saveUnder();
+        } else {
+            syncToBackendAndSaveWettkampf(lastSavePath);
+        }
     };
+
+    // Speichern-unter... Funktion hihi
+    function saveUnder() {
+        save({filters: [{name: "Wettkampfdatei", extensions: ["wkdata"]}], title: "Wettkampf speichern unter..."}).then((filePath) => {
+            if(filePath === null) {
+                return;
+            } else {
+                syncToBackendAndSaveWettkampf(filePath);
+            }
+        });
+    }
+
+    function syncToBackendAndSaveWettkampf(path: string) {
+        displayToast("saveToast", "Bitten warten", "Wettkampf wird gespeichert...", <Spinner size="tiny" />, -1);
+        invoke("sync_to_backend_and_save", {frontendstorage: frontendStorage, filepath: path}).then((response) => {
+            if(response !== "NoError") {
+                updateToastWithID("saveToast", "error", "Fehler", "Ein Fehler ist aufgetreten: " +  response, <ErrorCircleFilled />, 3000);
+            } else {
+                updateToastWithID("saveToast", "success", "Speichern erfolgreich", "Der Wettkampf wurde gespeichert.", <CheckmarkFilled />, 3000);
+                setLastSavePath(path);
+            }
+        });
+    }
 
     // Global State for all the JudgingTableData (i.e., FrontendStorage)
     const [frontendStorage, setFrontendStorage] = useState<FrontendStorage>(() => {
@@ -136,6 +176,9 @@ function Editor() {
 
     }
 
+    // Variable for setting if we have any doubles at all
+    var doublesExist: boolean = false;
+
     // Effect to check for potential doubles!
     useEffect(() => {
 
@@ -144,10 +187,17 @@ function Editor() {
             return;
         }
 
+        doublesExist = false;
+
         var doublesNormal: Map<string, number> = new Map();
         var doublesFinale: Map<string, number> = new Map();
         
         // Collect the amount of names
+        // But only if we are not undefined!
+        if(frontendStorage.wk_judgingtables == undefined || frontendStorage.wk_judgingtables === null) {
+            return;
+        }
+
         frontendStorage.wk_judgingtables?.forEach((table) => {
             if(table.table_is_finale) {
                 table.judges.forEach((judge) => {
@@ -178,6 +228,7 @@ function Editor() {
                         judge.doubleFound = false;
                     } else {
                         judge.doubleFound = true;
+                        doublesExist = true;
                     }
                 })
             } else {
@@ -187,6 +238,7 @@ function Editor() {
                         judge.doubleFound = false;
                     } else {
                         judge.doubleFound = true;
+                        doublesExist = true;
                     }
                 })
             }
@@ -195,6 +247,53 @@ function Editor() {
         setFrontendStorage(Object.assign({}, temp_storage));
 
     }, [frontendStorage]);
+
+    // Toaster functions
+    const { dispatchToast, updateToast, } = useToastController();
+    // Most important function to display a toaster with a given title
+    function displayToast(id: string, title: string, message: string, icon: React.JSX.Element, timeout?: number) {
+        dispatchToast(
+            <Toast>
+                <ToastTitle title={title} media={icon} />
+                <ToastBody>
+                    <div className="toasterBody">
+                        <Text>{message}</Text>
+                    </div>
+                </ToastBody>
+                <ToastFooter>
+                    <ToastTrigger>
+                        <Link>Ausblenden</Link>
+                    </ToastTrigger>
+                </ToastFooter>
+            </Toast>,
+            {
+                toastId: id,
+                timeout: timeout,
+            }
+        );
+    }
+
+    function updateToastWithID(id: string, intent: ToastIntent, title: string, message: string, icon: JSX.Element, timeout: number) {
+        updateToast({
+            toastId: id,
+            intent: intent,
+            content: 
+                <Toast>
+                    <ToastTitle title={title} media={icon} />
+                    <ToastBody>
+                        <div className="toasterBody">
+                            <Text>{message}</Text>
+                        </div>
+                    </ToastBody>
+                    <ToastFooter>
+                        <ToastTrigger>
+                            <Link>Ausblenden</Link>
+                        </ToastTrigger>
+                    </ToastFooter>
+                </Toast>,
+            timeout: timeout,
+        });
+    }
 
     return (
         <FluentProvider theme={theme}>
@@ -212,18 +311,18 @@ function Editor() {
                             {(triggerProps: MenuButtonProps) => (
                                 // @ts-ignore
                                 // Works fine for now, I have no idea what the problem is.
-                                <SplitButton size="small" appearance="secondary" icon={<SaveFilled></SaveFilled>} menuButton={triggerProps} primaryActionButton={primaryActionButtonProps}>Wettkampf speichern</SplitButton>
+                                <SplitButton appearance="secondary" icon={<SaveFilled></SaveFilled>} menuButton={triggerProps} primaryActionButton={<Text onClick={() => saveWettkampf()}>Wettkampf speichern</Text>}></SplitButton>
                             )}
                         </MenuTrigger>
                         <MenuPopover>
                             <MenuList>
-                                <MenuItem>Speichern unter...</MenuItem>
+                                <MenuItem onClick={() => saveUnder()}>Speichern unter...</MenuItem>
                             </MenuList>
                         </MenuPopover>
                     </Menu>
                     <Menu>
                         <MenuTrigger disableButtonEnhancement>
-                            <MenuButton size="small" appearance="primary" icon={<DocumentFilled></DocumentFilled>}>Pläne erstellen</MenuButton>
+                            <MenuButton appearance="primary" icon={<DocumentFilled></DocumentFilled>}>Pläne erstellen</MenuButton>
                         </MenuTrigger>
                         <MenuPopover>
                             <MenuList>
@@ -248,7 +347,7 @@ function Editor() {
                         <MenuItem onClick={() => {setKindToCreate("Geradeturnen auf Musik"); setOpen(true)}}>Geradeturnen auf Musik</MenuItem>
                         <MenuItem onClick={() => {setKindToCreate("Spiraleturnen"); setOpen(true)}}>Spiraleturnen</MenuItem>
                         <MenuItem onClick={() => {setKindToCreate("Sprung"); setOpen(true)}}>Sprung</MenuItem>
-                        <MenuItem onClick={() => {setKindToCreate("Leer"); setOpen(true)}}>Leer</MenuItem>
+                        { /* <MenuItem onClick={() => {setKindToCreate("Leer"); setOpen(true)}}>Leer</MenuItem> */ }
                     </MenuList>
                 </MenuPopover>
             </Menu>
@@ -270,6 +369,7 @@ function Editor() {
                     </DialogBody>
                 </DialogSurface>
             </Dialog>
+            <Toaster />
         </FluentProvider>
     );
 }

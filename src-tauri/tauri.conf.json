@@ -54,11 +54,11 @@
       },
       "dialog": {
         "all": false,
-        "ask": false,
+        "ask": true,
         "confirm": false,
         "message": false,
         "open": false,
-        "save": false
+        "save": true
       }
     },
     "bundle": {

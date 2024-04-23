@@ -1,18 +1,20 @@
-use std::sync::Mutex;
+use std::{collections::HashMap, sync::Mutex};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Kampfrichter {
     pub role: String,
     pub name: String,
+    pub doubleFound: bool,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Kampfgericht {
+    pub uniqueID: String,
     pub table_name: String,
     pub table_kind: String,
     pub table_is_finale: bool,
-    pub judges: Vec<Kampfrichter>,
+    pub judges: HashMap<String, Kampfrichter>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -23,7 +25,7 @@ pub struct Storage {
     pub wk_responsible_person: Mutex<String>,
     pub wk_judgesmeeting_time: Mutex<String>,
     pub wk_replacement_judges: Mutex<Vec<String>>,
-    pub wk_judgingtables: Mutex<Vec<Kampfgericht>>,
+    pub wk_judgingtables: Mutex<HashMap<String, Kampfgericht>>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -34,7 +36,7 @@ pub struct FrontendStorage {
     pub wk_responsible_person: String,
     pub wk_judgesmeeting_time: String,
     pub wk_replacement_judges: Option<Vec<String>>,
-    pub wk_judgingtables: Option<Vec<Kampfgericht>>,
+    pub wk_judgingtables: Option<HashMap<String, Kampfgericht>>,
 }
 
 #[repr(C)]
@@ -51,4 +53,5 @@ pub enum ApplicationError {
     DeserializeNotSupportedError = 7,
     TauriWindowCreationError = 8,
     TauriWindowShowError = 9,
+    RustWriteFileError = 10,
 }

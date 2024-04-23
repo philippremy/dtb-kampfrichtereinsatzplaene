@@ -6,6 +6,7 @@
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::Mutex;
+use std::collections::HashMap;
 use tauri::{AppHandle, State};
 use crate::FFI::create_tables_docx;
 use crate::types::{ApplicationError, FrontendStorage, Kampfgericht, Kampfrichter, Storage};
@@ -95,62 +96,12 @@ fn update_storage_data(frontend_storage: FrontendStorage, storage: State<Storage
     return ApplicationError::NoError;
 }
 
-// MARK: Func: Debug Library Test
-/// ONLY FOR TESTING PURPOSES.
-/// REMOVE LATER.
-#[tauri::command]
-fn test_library() {
-
-    let judge1 = Kampfrichter {
-        role: "AK1".to_string(),
-        name: "Philipp Remy 1".to_string(),
-    };
-
-    let judge2 = Kampfrichter {
-        role: "AK2".to_string(),
-        name: "Philipp Remy 2".to_string(),
-    };
-
-    let judgingtable = Kampfgericht {
-        table_name: "Kampfgericht 1".to_string(),
-        table_kind: "Geradeturnen auf Musik".to_string(),
-        table_is_finale: false,
-        judges: vec![judge1.clone(), judge2.clone()],
-    };
-
-    let judgingtable2 = Kampfgericht {
-        table_name: "Kampfgericht 2".to_string(),
-        table_kind: "Geradeturnen ohne Musik".to_string(),
-        table_is_finale: false,
-        judges: vec![judge1.clone(), judge2.clone()],
-    };
-
-    let storage = Storage {
-        wk_name: Mutex::new("99. Deutsche Meisterschaften".to_string()),
-        wk_date: Mutex::new("09.09.2024".to_string()),
-        wk_place: Mutex::new("Hamburg".to_string()),
-        wk_responsible_person: Mutex::new("Philipp Remy".to_string()),
-        wk_judgesmeeting_time: Mutex::new("09:30".to_string()),
-        wk_replacement_judges: Mutex::new(vec!["Person1".to_string(), "Person2".to_string(), "Person3".to_string()]),
-        wk_judgingtables: Mutex::new(vec![judgingtable, judgingtable2]),
-    };
-
-    match create_tables_docx(&storage, PathBuf::from("/path/to/file")) {
-        Ok(_) => {}
-        Err(err) => {
-            eprintln!("{:?}", err);
-            exit(0);
-        }
-    }
-
-}
-
 // MARK: Func: Create Wettkampf Window
 /// Tauri Command for creating a window that creates a new Wettkampf
 #[tauri::command]
 async fn create_wettkampf(app_handle: AppHandle) -> ApplicationError {
     let create_wettkampf_window = match tauri::WindowBuilder::new(&app_handle, "createWettkampf", tauri::WindowUrl::App(PathBuf::from("createWettkampf.html")))
-        .inner_size(450.0, 600.0)
+        .inner_size(515.0, 600.0)
         .title("Wettkampf erstellen")
         .focused(true)
         .center()
@@ -302,12 +253,93 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<Frontend
     return Ok(frontend_storage);
 }
 
+#[tauri::command]
+async fn sync_to_backend_and_save(frontendstorage: FrontendStorage, filepath: String, storage: State<'_, Storage>) -> Result<ApplicationError, ()> {
+
+    match storage.wk_name.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_name.clone();
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_place.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_place;
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_date.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_date;
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_judgesmeeting_time.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_judgesmeeting_time;
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_responsible_person.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_responsible_person;
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_replacement_judges.lock() {
+        Ok(mut guard) => {
+            *guard = match frontendstorage.wk_replacement_judges {
+                Some(map) => {map},
+                None => {Vec::new()},
+            };
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_judgingtables.lock() {
+        Ok(mut guard) => {
+            *guard = match frontendstorage.wk_judgingtables {
+                Some(map) => {map},
+                None => {HashMap::new()},
+            };
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    // Serialize data
+    let serialized_data = match serde_json::to_string(storage.inner()) {
+        Ok(data) => {data}
+        Err(_err) => { return Ok(ApplicationError::JSONSerializeError) }
+    };
+
+    // Write file at path!
+    match std::fs::write(filepath, serialized_data) {
+        Ok(()) => {},
+        Err(_err) => { return Ok(ApplicationError::RustWriteFileError) }
+    }
+
+    return Ok(ApplicationError::NoError);
+
+}
+
 // MARK: Main Function
 /// Main application entry function.
 fn main() {
     tauri::Builder::default()
         .manage(Storage::default())
-        .invoke_handler(tauri::generate_handler![update_storage_data, test_library, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend])
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save])
         .setup(|_app| {
             Ok(())
         })
