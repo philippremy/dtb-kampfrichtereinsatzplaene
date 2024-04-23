@@ -21,31 +21,30 @@ extern "C" {
 /// Param 1: A immutable reference to the global storage struct.
 /// Param 2: A PathBuf containing the path where the plan should be saved to.
 /// Returns: A Result either containing void (() == Success!) or an FFIError which gives more information.
-pub fn create_tables_docx(storage: &Storage, save_path: PathBuf) -> Result<(), ApplicationError> {
+pub fn create_tables_docx(storage: &Storage, save_path: PathBuf) -> Result<ApplicationError, ()> {
 
     // Serialize data and get pointer to it
     let serialized_data = match serde_json::to_string(storage) {
         Ok(data) => {data}
-        Err(_err) => { return Err(ApplicationError::JSONSerializeError) }
+        Err(_err) => { return Ok(ApplicationError::JSONSerializeError) }
     };
     let serialized_data_cstring = match CString::new(serialized_data) {
         Ok(cstr) => {cstr}
-        Err(_err) => { return Err(ApplicationError::CStringNullError) }
+        Err(_err) => { return Ok(ApplicationError::CStringNullError) }
     };
     let serialized_data_cstring_ptr = serialized_data_cstring.as_ptr();
 
     // Get pointer to save path
     let save_path_cstring = match CString::new(save_path.to_str().unwrap()) {
         Ok(cstr) => {cstr}
-        Err(_err) => { return Err(ApplicationError::CStringNullError) }
+        Err(_err) => { return Ok(ApplicationError::CStringNullError) }
     };
     let save_path_cstring_ptr = save_path_cstring.as_ptr();
 
     // Call function and retrieve Result
     unsafe {
         let error_code = ffi_create_from_raw_data(serialized_data_cstring_ptr, save_path_cstring_ptr);
-        assert_eq!(error_code, ApplicationError::NoError);
+        return Ok(error_code);
     }
 
-    return Ok(());
 }

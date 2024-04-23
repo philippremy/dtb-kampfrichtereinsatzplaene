@@ -295,6 +295,52 @@ function Editor() {
         });
     }
 
+    // Function to create plans as docx/pdf
+    async function createPlans(type: string) {
+        if(! await getUserApproval()) {
+            return;
+        }
+        if(type === "pdf") {
+            save({filters: [{name: "Adobe Acrobat Portable Document File", extensions: ["pdf"]}], title: "Einsatzplan speichern als PDF"}).then((filePath) => {
+                if(filePath === null) {
+                    return;
+                } else {
+                    syncWithBackendAndCreate(filePath, "pdf");
+                }
+            });
+        } else {
+            save({filters: [{name: "Open XML Wordprocessing Document", extensions: ["docx"]}], title: "Einsatzplan speichern als DOCX"}).then((filePath) => {
+                if(filePath === null) {
+                    return;
+                } else {
+                    syncWithBackendAndCreate(filePath, "docx");
+                }
+            });
+        }
+    }
+
+    // Function to sync with backend and create the plans
+    function syncWithBackendAndCreate(path: string, type: string) {
+        displayToast("createToast", "Bitten warten", "Einsatzplan wird erstellt...", <Spinner size="tiny" />, -1);
+        if(type === "docx") {
+            invoke("sync_to_backend_and_create_docx", {frontendstorage: frontendStorage, filepath: path}).then((response) => {
+                if(response !== "NoError") {
+                    updateToastWithID("createToast", "error", "Fehler", "Ein Fehler ist aufgetreten: " +  response, <ErrorCircleFilled />, 3000);
+                } else {
+                    updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000);
+                }
+            });
+        } else if(type === "pdf") {
+            invoke("sync_to_backend_and_create_pdf", {frontendstorage: frontendStorage, filepath: path}).then((response) => {
+                if(response !== "NoError") {
+                    updateToastWithID("createToast", "error", "Fehler", "Ein Fehler ist aufgetreten: " +  response, <ErrorCircleFilled />, 3000);
+                } else {
+                    updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000);
+                }
+            });
+        }
+    }
+
     return (
         <FluentProvider theme={theme}>
             <div id="editorHeader">
@@ -326,8 +372,8 @@ function Editor() {
                         </MenuTrigger>
                         <MenuPopover>
                             <MenuList>
-                                <MenuItem>Als Word-Datei</MenuItem>
-                                <MenuItem>Als PDF</MenuItem>
+                                <MenuItem onClick={() => createPlans("docx")}>Als Word-Datei</MenuItem>
+                                <MenuItem onClick={() => createPlans("pdf")}>Als PDF</MenuItem>
                             </MenuList>
                         </MenuPopover>
                     </Menu>

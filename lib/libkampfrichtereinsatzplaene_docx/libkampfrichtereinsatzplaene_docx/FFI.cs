@@ -47,6 +47,7 @@ public class FFI
         }
         catch (Exception e)
         {
+            Console.WriteLine(e.Message);
             return e switch
             {
                 ArgumentNullException => ApplicationError.DeserializeArgumentNullError,

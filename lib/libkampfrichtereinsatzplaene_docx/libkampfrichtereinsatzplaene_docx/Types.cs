@@ -6,27 +6,29 @@ namespace libkampfrichtereinsatzplaene_docx;
 
 public class Kampfrichter
 {
-    public string role { get; set; }
-    public string name { get; set; }
+    public string? role { get; set; }
+    public string? name { get; set; }
+    public bool? doubleFound { get; set; }
 }
 
 public class Kampfgericht
 {
-    public string table_name { get; set; }
-    public string table_kind { get; set; }
-    public bool table_is_finale { get; set; }
-    public Kampfrichter[] judges { get; set; }
+    public string? uniqueID { get; set; }
+    public string? table_name { get; set; }
+    public string? table_kind { get; set; }
+    public bool? table_is_finale { get; set; }
+    public Dictionary<string, Kampfrichter>? judges { get; set; }
 }
 
 public class Storage
 {
-    public string wk_name { get; set; }
-    public string wk_date { get; set; }
-    public string wk_place { get; set; }
-    public string wk_responsible_person { get; set; }
-    public string wk_judgesmeeting_time { get; set; }
-    public string[] wk_replacement_judges { get; set; }
-    public Kampfgericht[] wk_judgingtables { get; set; }
+    public string? wk_name { get; set; }
+    public string? wk_date { get; set; }
+    public string? wk_place { get; set; }
+    public string? wk_responsible_person { get; set; }
+    public string? wk_judgesmeeting_time { get; set; }
+    public string[]? wk_replacement_judges { get; set; }
+    public Dictionary<string, Kampfgericht>? wk_judgingtables { get; set; }
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
@@ -55,6 +57,10 @@ public enum ApplicationError {
     DeserializeArgumentNullError = 5,
     DeserializeJSONError = 6,
     DeserializeNotSupportedError = 7,
-    StorageNullError = 8,
-    MarshalSavePathNullError = 9,
+    TauriWindowCreationError = 8,
+    TauriWindowShowError = 9,
+    RustWriteFileError = 10,
+    MarshalSavePathNullError = 11,
+    StorageNullError = 12,
+    CSharpWriteError = 13,
 }

@@ -334,12 +334,151 @@ async fn sync_to_backend_and_save(frontendstorage: FrontendStorage, filepath: St
 
 }
 
+/// Function to sync all stuff and create the plans using FFI
+#[tauri::command]
+async fn sync_to_backend_and_create_docx(frontendstorage: FrontendStorage, filepath: String, storage: State<'_, Storage>) -> Result<ApplicationError, ()> {
+
+    match storage.wk_name.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_name.clone();
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_place.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_place;
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_date.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_date;
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_judgesmeeting_time.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_judgesmeeting_time;
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_responsible_person.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_responsible_person;
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_replacement_judges.lock() {
+        Ok(mut guard) => {
+            *guard = match frontendstorage.wk_replacement_judges {
+                Some(map) => {map},
+                None => {Vec::new()},
+            };
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_judgingtables.lock() {
+        Ok(mut guard) => {
+            *guard = match frontendstorage.wk_judgingtables {
+                Some(map) => { map },
+                None => { HashMap::new() },
+            };
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    return Ok(create_tables_docx(storage.inner(), PathBuf::from(filepath)).unwrap());
+
+}
+
+#[tauri::command]
+async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepath: String, storage: State<'_, Storage>) -> Result<ApplicationError, ()> {
+
+    match storage.wk_name.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_name.clone();
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_place.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_place;
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_date.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_date;
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_judgesmeeting_time.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_judgesmeeting_time;
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_responsible_person.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_responsible_person;
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_replacement_judges.lock() {
+        Ok(mut guard) => {
+            *guard = match frontendstorage.wk_replacement_judges {
+                Some(map) => {map},
+                None => {Vec::new()},
+            };
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_judgingtables.lock() {
+        Ok(mut guard) => {
+            *guard = match frontendstorage.wk_judgingtables {
+                Some(map) => { map },
+                None => { HashMap::new() },
+            };
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    return Ok(ApplicationError::NoError);
+
+}
+
 // MARK: Main Function
 /// Main application entry function.
 fn main() {
     tauri::Builder::default()
         .manage(Storage::default())
-        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save])
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf])
         .setup(|_app| {
             Ok(())
         })

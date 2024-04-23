@@ -54,4 +54,7 @@ pub enum ApplicationError {
     TauriWindowCreationError = 8,
     TauriWindowShowError = 9,
     RustWriteFileError = 10,
+    MarshalSavePathNullError = 11,
+    StorageNullError = 12,
+    CSharpWriteError = 13,
 }
