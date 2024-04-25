@@ -1,11 +1,20 @@
 import { Button, Caption2, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, FluentProvider, Input, Link, Menu, MenuButton, MenuButtonProps, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, SplitButton, Subtitle2, Text, Toast, ToastBody, Toaster, ToastFooter, ToastIntent, ToastTitle, ToastTrigger, useToastController, webDarkTheme, webLightTheme } from "@fluentui/react-components";
-import { AddFilled, CheckmarkFilled, DocumentFilled, ErrorCircleFilled, PenFilled, SaveFilled } from "@fluentui/react-icons";
+import {
+    AddFilled, CalendarFilled,
+    CheckmarkFilled,
+    DocumentFilled,
+    ErrorCircleFilled,
+    PenFilled, PersonFilled, PinFilled,
+    SaveFilled, TimePickerFilled,
+    TrophyFilled
+} from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api";
-import { useEffect, useState } from "react";
+import React, {useEffect, useId, useState} from "react";
 import "./Editor.css";
 import { v4 as uuidv4 } from 'uuid';
 import KampfgerichteRenderer from "./KampfgerichteRenderer";
 import { ask, save } from "@tauri-apps/api/dialog";
+import {getCurrent} from "@tauri-apps/api/window";
 
 // Kampfrichter Interface
 export type Kampfrichter = {
@@ -61,9 +70,60 @@ function Editor() {
 
     // Fetch initial data on mount
     useEffect(() => {
-        invoke("get_wk_data_to_frontend").then((response: unknown) => {
-            setFrontendStorage(response as FrontendStorage);
-        })
+        invoke("get_wk_data_to_frontend").then((response) => {
+            const backendStorage = response as FrontendStorage;
+
+            // We have to recreate the maps, because they cannot be deserialized into a Map from JSON
+            // Neither can we cast them to a Map or create them from the Object Array.
+            // So the build process has to be manual.
+            // @ts-ignore
+            const kampfgerichtValues = Object.entries(backendStorage.wk_judgingtables);
+            let judgingTableMap = new Map<string, Kampfgericht>();
+            kampfgerichtValues.forEach((pair) => {
+                // The easy stuff.
+                // @ts-ignore
+                const tableName = pair[1]["table_name"];
+                // @ts-ignore
+                const tableKind = pair[1]["table_kind"];
+                // @ts-ignore
+                const tableIsFinale = pair[1]["table_is_finale"];
+                // The complicated Map in the Map :(
+                // @ts-ignore
+                const kampfrichterValues = Object.entries(pair[1]["judges"]);
+                let judgesMap = new Map<string, Kampfrichter>();
+                kampfrichterValues.forEach((secondPair) => {
+                    // @ts-ignore
+                    const name = secondPair[1]["name"];
+                    // @ts-ignore
+                    const doubleFound = secondPair[1]["doubleFound"];
+                    judgesMap.set(secondPair[0], {
+                        role: secondPair[0],
+                        name: name,
+                        doubleFound: doubleFound,
+                    });
+                });
+                judgingTableMap.set(pair[0], {
+                    judges: judgesMap,
+                    table_is_finale: tableIsFinale,
+                    table_kind: tableKind,
+                    table_name: tableName,
+                    uniqueID: pair[0],
+                });
+            });
+            if(backendStorage.wk_judgingtables !== undefined) {
+                setFrontendStorage({
+                    changedByDoubleHook: true,
+                    wk_date: backendStorage.wk_date,
+                    wk_judgesmeeting_time: backendStorage.wk_judgesmeeting_time,
+                    wk_judgingtables: judgingTableMap,
+                    wk_name: backendStorage.wk_name,
+                    wk_place: backendStorage.wk_place,
+                    wk_replacement_judges: backendStorage.wk_replacement_judges,
+                    wk_responsible_person: backendStorage.wk_responsible_person
+
+                });
+            }
+        });
     }, []);
 
     // Check if the user really wants to send anything to the backend!
@@ -86,7 +146,7 @@ function Editor() {
         } else {
             syncToBackendAndSaveWettkampf(lastSavePath);
         }
-    };
+    }
 
     // Speichern-unter... Funktion hihi
     function saveUnder() {
@@ -107,6 +167,8 @@ function Editor() {
             } else {
                 updateToastWithID("saveToast", "success", "Speichern erfolgreich", "Der Wettkampf wurde gespeichert.", <CheckmarkFilled />, 3000);
                 setLastSavePath(path);
+                let currentWindow = getCurrent();
+                currentWindow.setTitle(frontendStorage.wk_name + " (gespeichert)").then(() => {});
             }
         });
     }
@@ -119,8 +181,8 @@ function Editor() {
             wk_place: "",
             wk_responsible_person: "",
             wk_judgesmeeting_time: "",
-            wk_replacement_judges: undefined,
-            wk_judgingtables: undefined,
+            wk_replacement_judges: [],
+            wk_judgingtables: new Map(),
             changedByDoubleHook: false,
         };
         return storage;
@@ -138,11 +200,10 @@ function Editor() {
 
         setFrontendStorage(() => {
 
-            var judgingtables = new Map<string, Kampfgericht>();
+            let judgingtables = new Map<string, Kampfgericht>();
 
             // Handle Arrays
             if(frontendStorage.wk_judgingtables === undefined || frontendStorage.wk_judgingtables === null) {
-                var judgingtables = new Map<string, Kampfgericht>();
                 judgingtables.set(uniqueID, {
                     uniqueID: uniqueID,
                     table_name: name,
@@ -161,7 +222,7 @@ function Editor() {
                 });
             }
 
-            var storage: FrontendStorage = {
+            let storage: FrontendStorage = {
                 wk_name: frontendStorage.wk_name,
                 wk_date: frontendStorage.wk_date,
                 wk_place: frontendStorage.wk_place,
@@ -177,7 +238,7 @@ function Editor() {
     }
 
     // Variable for setting if we have any doubles at all
-    var doublesExist: boolean = false;
+    let doublesExist: boolean = false;
 
     // Effect to check for potential doubles!
     useEffect(() => {
@@ -189,16 +250,16 @@ function Editor() {
 
         doublesExist = false;
 
-        var doublesNormal: Map<string, number> = new Map();
-        var doublesFinale: Map<string, number> = new Map();
+        let doublesNormal: Map<string, number> = new Map();
+        let doublesFinale: Map<string, number> = new Map();
         
         // Collect the amount of names
         // But only if we are not undefined!
-        if(frontendStorage.wk_judgingtables == undefined || frontendStorage.wk_judgingtables === null) {
+        if(frontendStorage.wk_judgingtables === undefined) {
             return;
         }
 
-        frontendStorage.wk_judgingtables?.forEach((table) => {
+        frontendStorage.wk_judgingtables.forEach((table) => {
             if(table.table_is_finale) {
                 table.judges.forEach((judge) => {
                     if(doublesFinale.has(judge.name)) {
@@ -219,8 +280,13 @@ function Editor() {
         });
 
         // Iterate through all tables
-        var temp_storage = frontendStorage;
-        temp_storage.wk_judgingtables?.forEach((table) => {
+        let temp_storage = frontendStorage;
+        // Collect the amount of names
+        // But only if we are not undefined!
+        if(temp_storage.wk_judgingtables === undefined) {
+            return;
+        }
+        temp_storage.wk_judgingtables.forEach((table) => {
             if(table.table_is_finale) {
                 table.judges.forEach((judge) => {
                     let count = doublesFinale.get(judge.name)!;
@@ -244,7 +310,11 @@ function Editor() {
             }
         });
 
+        temp_storage.changedByDoubleHook = true;
+
         setFrontendStorage(Object.assign({}, temp_storage));
+        let currentWindow = getCurrent();
+        currentWindow.setTitle(frontendStorage.wk_name + " (nicht gespeichert)").then(() => {});
 
     }, [frontendStorage]);
 
@@ -341,15 +411,66 @@ function Editor() {
         }
     }
 
+    // State for wkData Dialog
+    const [wkOpen, setWkOpen] = useState(false);
+
+    // IDs
+    const nameInput = useId();
+    const dateInput = useId();
+    const placeInput = useId();
+    const timeInput = useId();
+    const responsiblePersonInput = useId();
+
+    // Function to change the Wettkampf general data
+    function changeWkData() {
+        let temp_storage = frontendStorage;
+        temp_storage.wk_name = document.getElementById(nameInput)!.getAttribute("value")!;
+        temp_storage.wk_place = document.getElementById(placeInput)!.getAttribute("value")!;
+        temp_storage.wk_judgesmeeting_time = document.getElementById(timeInput)!.getAttribute("value")!;
+        temp_storage.wk_responsible_person = document.getElementById(responsiblePersonInput)!.getAttribute("value")!;
+        temp_storage.wk_date = formatDate(document.getElementById(dateInput)!.getAttribute("value")!) === "NaN.NaN.NaN" ? temp_storage.wk_date : formatDate(document.getElementById(dateInput)!.getAttribute("value")!);
+        setFrontendStorage(Object.assign({}, temp_storage));
+    }
+
+    // Function for date generation
+    function formatDate(inputDate: string) {
+        // Parse the input date string as a Date object
+        let date = new Date(inputDate);
+
+        // Extract day, month, and year components
+        let day = date.getDate();
+        let month = date.getMonth() + 1; // Months are zero-based, so add 1
+        let year = date.getFullYear();
+
+        let dayStr;
+        let monthStr;
+        let yearStr = year.toString();
+
+        // Pad day and month with leading zeros if necessary
+        if (day < 10) {
+            dayStr = '0' + day;
+        } else {
+            dayStr = day.toString();
+        }
+        if (month < 10) {
+            monthStr = '0' + month;
+        } else {
+            monthStr = month.toString();
+        }
+
+        // Construct the formatted date string
+        return dayStr + '.' + monthStr + '.' + yearStr;
+    }
+
     return (
         <FluentProvider theme={theme}>
             <div id="editorHeader">
                 <div id="wkInfoContainerWithButton">
+                    <Button appearance="subtle" icon={<PenFilled></PenFilled>} id="changeWkInfoButton" onClick={() => setWkOpen(true)} />
                     <div id="wkInfoContainer">
                         <Subtitle2 id="wettkampfname">{frontendStorage.wk_name}</Subtitle2>
                         <Caption2 id="wettkampfInfo">am {frontendStorage.wk_date} in {frontendStorage.wk_place}</Caption2>
                     </div>
-                    <Button appearance="subtle" icon={<PenFilled></PenFilled>} id="changeWkInfoButton" />
                 </div>
                 <div id="saveButtonContainer">
                     <Menu positioning={"below-end"}>
@@ -411,6 +532,36 @@ function Editor() {
                                 <Button appearance="secondary">Schließen</Button>
                             </DialogTrigger>
                             <Button appearance="primary" onClick={() => {createTable(kindToCreate, nameToCreate); setOpen(false)}}>Erstellen</Button>
+                        </DialogActions>
+                    </DialogBody>
+                </DialogSurface>
+            </Dialog>
+            <Dialog open={wkOpen} onOpenChange={(_ev, data) => setWkOpen(data.open)}>
+                <DialogSurface>
+                    <DialogBody>
+                        <DialogTitle>Wettkampfdaten ändern</DialogTitle>
+                        <DialogContent>
+                            <Field label={"Name des Wettkampfs"} required={true}>
+                                <Input id={nameInput} defaultValue={frontendStorage.wk_name} contentBefore={<TrophyFilled></TrophyFilled>} />
+                            </Field>
+                            <Field label={"Ort des Wettkampfs"} required={true}>
+                                <Input id={placeInput} defaultValue={frontendStorage.wk_place} contentBefore={<PinFilled></PinFilled>} />
+                            </Field>
+                            <Field label={"Datum des Wettkampfs"} required={true}>
+                                <Input id={dateInput} defaultValue={frontendStorage.wk_date} type={"date"} contentBefore={<CalendarFilled></CalendarFilled>} />
+                            </Field>
+                            <Field label={"Uhrzeit der Kampfrichterbesprechung"} required={true}>
+                                <Input id={timeInput} defaultValue={frontendStorage.wk_judgesmeeting_time} type={"time"} contentBefore={<TimePickerFilled></TimePickerFilled>} />
+                            </Field>
+                            <Field label={"Kampfrichterbeauftragte*r"} required={true}>
+                                <Input id={responsiblePersonInput} defaultValue={frontendStorage.wk_responsible_person} contentBefore={<PersonFilled></PersonFilled>} />
+                            </Field>
+                        </DialogContent>
+                        <DialogActions>
+                            <DialogTrigger disableButtonEnhancement>
+                                <Button appearance="secondary">Schließen</Button>
+                            </DialogTrigger>
+                            <Button appearance="primary" onClick={() => {changeWkData(); setWkOpen(false)}}>Ändern</Button>
                         </DialogActions>
                     </DialogBody>
                 </DialogSurface>

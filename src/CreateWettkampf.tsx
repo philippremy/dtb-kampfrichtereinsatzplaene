@@ -1,37 +1,28 @@
-import { useEffect, useState } from "react";
-import { FluentProvider, webLightTheme, webDarkTheme, Image, Subtitle2, Field, Input, Button, Toaster, useToastController, Toast, ToastTitle, ToastBody} from "@fluentui/react-components";
+import React, {useEffect, useId, useState} from "react";
+import {
+  Button,
+  Field,
+  FluentProvider,
+  Image,
+  Input,
+  Subtitle2,
+  Toast,
+  ToastBody,
+  Toaster,
+  ToastTitle,
+  useToastController,
+  webDarkTheme,
+  webLightTheme
+} from "@fluentui/react-components";
 import "./CreateWettkampf.css";
+// @ts-ignore
 import dtbLogo from "./assets/dtb-logo.svg";
-import { CalendarFilled, PersonFilled, PinFilled, TimePickerFilled, TrophyFilled } from "@fluentui/react-icons";
-import { invoke } from "@tauri-apps/api";
-import { getCurrent } from "@tauri-apps/api/window";
+import {CalendarFilled, PersonFilled, PinFilled, TimePickerFilled, TrophyFilled} from "@fluentui/react-icons";
+import {invoke} from "@tauri-apps/api";
+import {getCurrent} from "@tauri-apps/api/window";
+import {FrontendStorage} from "./Editor.tsx";
 
 function CreateWettkampf() {
-
-  // Kampfrichter Interface
-  interface Kampfrichter {
-    role: string,
-    name: string,
-  }
-
-  // Kampfgericht Interface
-  interface Kampfgericht {
-    table_name: string,
-    table_kind: string,
-    table_is_finale: boolean,
-    judges: Array<Kampfrichter>,
-  }
-
-  // Frontend Storage Interface
-  interface FrontendStorage {
-    wk_name: string,
-    wk_date: string,
-    wk_place: string,
-    wk_responsible_person: string,
-    wk_judgesmeeting_time: string,
-    wk_replacement_judges: Array<string> | undefined,
-    wk_judgingtables: Array<Kampfgericht> | undefined,
-  }
 
   // Theme Hook
   const useThemeDetector = () => {
@@ -67,90 +58,112 @@ function CreateWettkampf() {
   const [timeValidationMessage, setTimeValidationMessage] = useState("");
   const [personValidationMessage, setPersonValidationMessage] = useState("");
 
-  // HashMap to track the entered data
-  const wkData: FrontendStorage = {
-    wk_name: "",
-    wk_date: "",
-    wk_place: "",
-    wk_responsible_person: "",
-    wk_judgesmeeting_time: "",
-    wk_replacement_judges: undefined,
-    wk_judgingtables: undefined
+  // Function for date generation
+  function formatDate(inputDate: string) {
+    // Parse the input date string as a Date object
+    let date = new Date(inputDate);
+
+    // Extract day, month, and year components
+    let day = date.getDate();
+    let month = date.getMonth() + 1; // Months are zero-based, so add 1
+    let year = date.getFullYear();
+
+    let dayStr;
+    let monthStr;
+    let yearStr = year.toString();
+
+    // Pad day and month with leading zeros if necessary
+    if (day < 10) {
+      dayStr = '0' + day;
+    } else {
+      dayStr = day.toString();
+    }
+    if (month < 10) {
+      monthStr = '0' + month;
+    } else {
+      monthStr = month.toString();
+    }
+
+    // Construct the formatted date string
+    return dayStr + '.' + monthStr + '.' + yearStr;
   }
 
   // Function for form validation
   function validateFormInput(data: React.FormEvent<HTMLInputElement>) {
-    if(data.currentTarget.value == "") {
-      switch (data.currentTarget.id) {
-        case "name":
+    switch (data.currentTarget.id) {
+      case nameInput:
+        if(data.currentTarget.value === "" || data.currentTarget.value === null || data.currentTarget.value === undefined) {
           setNameState("error");
           setNameValidationMessage("Es muss ein Wettkampfname vergeben werden.");
-          break;
-        case "place":
-          setPlaceState("error");
-          setPlaceValidationMessage("Es muss ein Wettkampfort angegeben werden.");
-          break;
-        case "date":
-          setDateState("error");
-          setDateValidationMessage("Es muss ein Wettkampfdatum angegeben werden.");
-          break;
-        case "time":
-          setTimeState("error");
-          setTimeValidationMessage("Es muss eine Uhrzeit für die Kampfrichterbesprechung angageben werden.");
-          break;
-        case "person":
-          setPersonState("error");
-          setPersonValidationMessage("Die/Der Kampfrichterbeauftragte für den Wettkampf muss benannt werden.");
-          break;
-      }
-      setSubmitButtonEnabled(false);
-    } else {
-      switch (data.currentTarget.id) {
-        case "name":
+        } else {
           setNameState("none");
           setNameValidationMessage("");
-          wkData.wk_name = data.currentTarget.value;
-          break;
-        case "place":
-          setPlaceState("none");
-          setPlaceValidationMessage("");
-          wkData.wk_place = data.currentTarget.value;
-          break;
-        case "date":
+        }
+        break;
+      case dateInput:
+        if(data.currentTarget.value === "" || data.currentTarget.value === null || data.currentTarget.value === undefined) {
+          setDateState("error");
+          setDateValidationMessage("Es muss ein Wettkampfdatum gewählt werden.");
+        } else {
           setDateState("none");
           setDateValidationMessage("");
-          wkData.wk_date = data.currentTarget.value;
-          break;
-        case "time":
+        }
+        break;
+      case timeInput:
+        if(data.currentTarget.value === "" || data.currentTarget.value === null || data.currentTarget.value === undefined) {
+          setTimeState("error");
+          setTimeValidationMessage("Es muss eine Zeit für die Kampfrichterbesprechung gewählt werden.");
+        } else {
           setTimeState("none");
           setTimeValidationMessage("");
-          wkData.wk_judgesmeeting_time = data.currentTarget.value;
-          break;
-        case "person":
+        }
+        break;
+      case placeInput:
+        if(data.currentTarget.value === "" || data.currentTarget.value === null || data.currentTarget.value === undefined) {
+          setPlaceState("error");
+          setPlaceValidationMessage("Es muss ein Wettkampfort angegeben werden.");
+        } else {
+          setPlaceState("none");
+          setPlaceValidationMessage("");
+        }
+        break;
+      case responsiblePersonInput:
+        if(data.currentTarget.value === "" || data.currentTarget.value === null || data.currentTarget.value === undefined) {
+          setPersonState("error");
+          setPersonValidationMessage("Es muss ein Wettkampfort angegeben werden.");
+        } else {
           setPersonState("none");
           setPersonValidationMessage("");
-          wkData.wk_responsible_person = data.currentTarget.value;
-          break;
-      }
-      for(const [_key, value] of Object.entries(wkData)) {
-        if(value === "") {
-          setSubmitButtonEnabled(false);
-        } else {
-          setSubmitButtonEnabled(true);
         }
-      }
+        break;
     }
   }
 
-  // Button State
-  const [submitButtonEnabled, setSubmitButtonEnabled] = useState(false);
+  // IDs
+  const nameInput = useId();
+  const dateInput = useId();
+  const placeInput = useId();
+  const timeInput = useId();
+  const responsiblePersonInput = useId();
 
   // Function for creating a new Wettkampf
   function createNewWettkampf() {
+
+    let wkData: FrontendStorage = {
+      changedByDoubleHook: false,
+      wk_date: formatDate(document.getElementById(dateInput)!.getAttribute("value")!),
+      wk_judgesmeeting_time: document.getElementById(timeInput)!.getAttribute("value")!,
+      wk_judgingtables: undefined,
+      wk_name: document.getElementById(nameInput)!.getAttribute("value")!,
+      wk_place: document.getElementById(placeInput)!.getAttribute("value")!,
+      wk_replacement_judges: undefined,
+      wk_responsible_person: document.getElementById(responsiblePersonInput)!.getAttribute("value")!
+
+    };
     invoke("sync_wk_data_and_open_editor", {data: wkData}).then((result) => {
       if(result === "NoError") {
         const thisWindow = getCurrent();
-        thisWindow.close();
+        thisWindow.close().then(() => {});
       }
       showBackendError(String(result));
     });
@@ -175,23 +188,23 @@ function CreateWettkampf() {
         </div>
         <div id="formContainer">
           <Field label={"Wettkampfname"} validationState={nameState} validationMessage={nameValidationMessage} required={true} className="wkField">
-            <Input id="name" onInput={(data) => validateFormInput(data)} contentBefore={<TrophyFilled></TrophyFilled>} />
+            <Input id={nameInput} onInput={(data) => validateFormInput(data)} contentBefore={<TrophyFilled></TrophyFilled>} />
           </Field>
           <Field label={"Wettkampfort"} validationState={placeState} validationMessage={placeValidationMessage} required={true} className="wkField">
-            <Input id="place" onInput={(data) => validateFormInput(data)} contentBefore={<PinFilled></PinFilled>} />
+            <Input id={placeInput} onInput={(data) => validateFormInput(data)} contentBefore={<PinFilled></PinFilled>} />
           </Field>
           <Field label={"Wettkampfdatum"} validationState={dateState} validationMessage={dateValidationMessage} required={true} className="wkField">
-            <Input id="date" type="date" placeholder="" onInput={(data) => validateFormInput(data)} contentBefore={<CalendarFilled></CalendarFilled>} />
+            <Input id={dateInput} type="date" placeholder="" onInput={(data) => validateFormInput(data)} contentBefore={<CalendarFilled></CalendarFilled>} />
           </Field>
           <Field label={"Kampfrichterbesprechung (Uhrzeit)"} validationState={timeState} validationMessage={timeValidationMessage} required={true} className="wkField">
-            <Input id="time" type="time" placeholder="" onInput={(data) => validateFormInput(data)} contentBefore={<TimePickerFilled></TimePickerFilled>} />
+            <Input id={timeInput} type="time" placeholder="" onInput={(data) => validateFormInput(data)} contentBefore={<TimePickerFilled></TimePickerFilled>} />
           </Field>
           <Field label={"Kampfrichterbeauftragte*r"} validationState={personState} validationMessage={personValidationMessage} required={true} className="wkField">
-            <Input id="person" onInput={(data) => validateFormInput(data)} contentBefore={<PersonFilled></PersonFilled>} />
+            <Input id={responsiblePersonInput} onInput={(data) => validateFormInput(data)} contentBefore={<PersonFilled></PersonFilled>} />
           </Field>
         </div>
         <div id="confirmButtonDiv">
-          <Button appearance="primary" disabled={!submitButtonEnabled} onClick={() => createNewWettkampf()}>Wettkampf erstellen</Button>
+          <Button appearance="primary" onClick={() => createNewWettkampf()}>Wettkampf erstellen</Button>
         </div>
       </div>
       <Toaster></Toaster>

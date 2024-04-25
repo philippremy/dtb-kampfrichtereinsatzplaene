@@ -57,4 +57,5 @@ pub enum ApplicationError {
     MarshalSavePathNullError = 11,
     StorageNullError = 12,
     CSharpWriteError = 13,
+    JSONDeserializeImporterError = 14,
 }

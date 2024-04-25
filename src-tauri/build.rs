@@ -16,9 +16,17 @@ fn main() {
 
     // Get the Source Code file for the FFI libdocx
     let ffi_library_source_file = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/FFI.cs");
+    let ffi_library_source_file1 = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/Types.cs");
+    let ffi_library_source_file2 = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/DocumentWriter.cs");
+    let ffi_library_source_file3 = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx.sln");
+    let ffi_library_source_file4 = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx.csproj");
 
     // Watch for changes in the FFI Source File
     println!("cargo::rerun-if-changed={}", ffi_library_source_file.display());
+    println!("cargo::rerun-if-changed={}", ffi_library_source_file1.display());
+    println!("cargo::rerun-if-changed={}", ffi_library_source_file2.display());
+    println!("cargo::rerun-if-changed={}", ffi_library_source_file3.display());
+    println!("cargo::rerun-if-changed={}", ffi_library_source_file4.display());
 
     // Get the main folder of the FFI libdocx library
     let ffi_library_main_dir = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib/libkampfrichtereinsatzplaene_docx");

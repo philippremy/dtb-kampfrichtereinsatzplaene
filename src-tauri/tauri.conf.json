@@ -46,7 +46,7 @@
         "setResizable": false,
         "setSize": false,
         "setSkipTaskbar": false,
-        "setTitle": false,
+        "setTitle": true,
         "show": false,
         "startDragging": false,
         "unmaximize": false,
@@ -57,7 +57,7 @@
         "ask": true,
         "confirm": false,
         "message": false,
-        "open": false,
+        "open": true,
         "save": true
       }
     },

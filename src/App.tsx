@@ -6,6 +6,7 @@ import dtbLogo from "./assets/dtb-logo.svg";
 import { FluentProvider, webLightTheme, webDarkTheme, Title2, Image, Button, useToastController, Toast, ToastTitle, ToastBody, Toaster } from "@fluentui/react-components";
 import { FolderOpenFilled, FormNewFilled } from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api";
+import { open } from '@tauri-apps/api/dialog';
 import { getCurrent } from "@tauri-apps/api/window";
 
 function App() {
@@ -38,6 +39,7 @@ function App() {
       if(result === "NoError") {
         const thisWindow = getCurrent();
         thisWindow.close();
+        return;
       }
       showBackendError(String(result));
     });
@@ -55,7 +57,29 @@ function App() {
 
   // Function to open a Wettkampf
   function openWettkampf() {
-
+    open({ title: "Wettkampfdatei öffnen...", multiple: false, filters: [{name: "Wettkampfdatei", extensions: ["wkdata"]}] }).then((file) => {
+      if(file === null) {
+        return;
+      } else if(Array.isArray(file)) {
+        invoke("import_wk_file_and_open_editor", {filepath: file[0]}).then((response) => {
+          if(response === "NoError") {
+            return;
+          } else {
+            showBackendError(response as string);
+          }
+        });
+      } else {
+        invoke("import_wk_file_and_open_editor", {filepath: file}).then((response) => {
+          if(response === "NoError") {
+            const thisWindow = getCurrent();
+            thisWindow.close().then(() => {});
+            return;
+          } else {
+            showBackendError(response as string);
+          }
+        });
+      }
+    });
   }
 
   return (

@@ -1,7 +1,7 @@
 import React from "react";
 import { FrontendStorage, Kampfgericht } from "./Editor";
 import "./Kampfgericht.css"
-import { Body1Stronger, Button, Caption1, Card, CardFooter, CardHeader, Checkbox, CheckboxOnChangeData, Combobox, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, Input, Label, Option } from "@fluentui/react-components";
+import { Body1Stronger, Button, Caption1, Card, CardFooter, CardHeader, Checkbox, CheckboxOnChangeData, Combobox, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, Input, Option } from "@fluentui/react-components";
 import { CheckmarkFilled, PenFilled, WarningFilled } from "@fluentui/react-icons";
 
 interface StateType {
@@ -47,7 +47,7 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
                 this.dataSelf = table[1];
                 break;
             }
-        };
+        }
     }
 
     updateValues(data: React.FormEvent<HTMLInputElement>) {
@@ -112,7 +112,7 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
                     break;
                 }
             }
-        };
+        }
 
     }
 
@@ -188,42 +188,43 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
     }
 
     matchTypeAndGetElements() {
+
         switch (this.dataSelf.table_kind) {
             case "Geradeturnen auf Musik":
                 return(
                     <div className="fieldContainer">
                         <Field>
-                            <Input contentBefore={"OK"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ok")} className="inputType" id="ok" />
+                            <Input defaultValue={this.dataSelf.judges.get("ok") ? this.dataSelf.judges.get("ok")!.name : ""} contentBefore={"OK"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ok")} className="inputType" id="ok" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"SK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk1")} className="inputType" id="sk1" />
+                            <Input defaultValue={this.dataSelf.judges.get("sk1") ? this.dataSelf.judges.get("sk1")!.name : ""} contentBefore={"SK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk1")} className="inputType" id="sk1" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"SK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk2")} className="inputType" id="sk2" />
+                            <Input defaultValue={this.dataSelf.judges.get("sk2") ? this.dataSelf.judges.get("sk2")!.name : ""} contentBefore={"SK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk2")} className="inputType" id="sk2" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"AK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak1")} className="inputType" id="ak1" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak1") ? this.dataSelf.judges.get("ak1")!.name : ""} contentBefore={"AK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak1")} className="inputType" id="ak1" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"AK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak2")} className="inputType" id="ak2" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak2") ? this.dataSelf.judges.get("ak2")!.name : ""} contentBefore={"AK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak2")} className="inputType" id="ak2" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"AK3"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak3")} className="inputType" id="ak3" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak3") ? this.dataSelf.judges.get("ak3")!.name : ""} contentBefore={"AK3"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak3")} className="inputType" id="ak3" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"AK4"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak4")} className="inputType" id="ak4" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak4") ? this.dataSelf.judges.get("ak4")!.name : ""} contentBefore={"AK4"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak4")} className="inputType" id="ak4" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"AIK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik1")} className="inputType" id="aik1" />
+                            <Input defaultValue={this.dataSelf.judges.get("aik1") ? this.dataSelf.judges.get("aik1")!.name : ""} contentBefore={"AIK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik1")} className="inputType" id="aik1" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"AIK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik2")} className="inputType" id="aik2" />
+                            <Input defaultValue={this.dataSelf.judges.get("aik2") ? this.dataSelf.judges.get("aik2")!.name : ""} contentBefore={"AIK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik2")} className="inputType" id="aik2" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"AIK3"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik3")} className="inputType" id="aik3" />
+                            <Input defaultValue={this.dataSelf.judges.get("aik3") ? this.dataSelf.judges.get("aik3")!.name : ""} contentBefore={"AIK3"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik3")} className="inputType" id="aik3" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"AIK4"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik4")} className="inputType" id="aik4" />
+                            <Input defaultValue={this.dataSelf.judges.get("aik4") ? this.dataSelf.judges.get("aik4")!.name : ""} contentBefore={"AIK4"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik4")} className="inputType" id="aik4" />
                         </Field>
                     </div>
                 );
@@ -231,25 +232,25 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
                 return(
                     <div className="fieldContainer">
                         <Field>
-                            <Input contentBefore={"OK"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ok")} className="inputType" id="ok" />
+                            <Input defaultValue={this.dataSelf.judges.get("ok") ? this.dataSelf.judges.get("ok")!.name : ""} contentBefore={"OK"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ok")} className="inputType" id="ok" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"SK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk1")} className="inputType" id="sk1" />
+                            <Input defaultValue={this.dataSelf.judges.get("sk1") ? this.dataSelf.judges.get("sk1")!.name : ""} contentBefore={"SK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk1")} className="inputType" id="sk1" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"SK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk2")} className="inputType" id="sk2" />
+                            <Input defaultValue={this.dataSelf.judges.get("sk2") ? this.dataSelf.judges.get("sk2")!.name : ""} contentBefore={"SK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk2")} className="inputType" id="sk2" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"AK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak1")} className="inputType" id="ak1" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak1") ? this.dataSelf.judges.get("ak1")!.name : ""} contentBefore={"AK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak1")} className="inputType" id="ak1" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"AK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak2")} className="inputType" id="ak2" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak2") ? this.dataSelf.judges.get("ak2")!.name : ""} contentBefore={"AK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak2")} className="inputType" id="ak2" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"AK3"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak3")} className="inputType" id="ak3" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak3") ? this.dataSelf.judges.get("ak3")!.name : ""} contentBefore={"AK3"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak3")} className="inputType" id="ak3" />
                         </Field>
                         <Field>
-                            <Input contentBefore={"AK4"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak4")} className="inputType" id="ak4" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak4") ? this.dataSelf.judges.get("ak4")!.name : ""} contentBefore={"AK4"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak4")} className="inputType" id="ak4" />
                         </Field>
                     </div>
                 );
@@ -270,7 +271,7 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
                     this.props.setStorage(Object.assign({}, temp_storage));
                     break;
                 }
-            };
+            }
         } else {
             for(const table of this.props.storage.wk_judgingtables!) {
                 if(table[0] === this.props.uniqueID) {
@@ -283,13 +284,13 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
                     this.props.setStorage(Object.assign({}, temp_storage));
                     break;
                 }
-            };
+            }
         }
 
     }
 
     changeValues() {
-        var temp_storage = this.props.storage;
+        let temp_storage = this.props.storage;
         let table = temp_storage.wk_judgingtables!.get(this.props.uniqueID)!;
         table.table_name = this.state.tableName!;
         table.table_kind = this.state.tableDiscipline!;
@@ -299,7 +300,7 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
     }
 
     removeTable() {
-        var temp_storage = this.props.storage;
+        let temp_storage = this.props.storage;
         temp_storage.wk_judgingtables?.delete(this.props.uniqueID);
         temp_storage.changedByDoubleHook = false;
         this.props.setStorage(Object.assign({}, temp_storage));
@@ -354,7 +355,7 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
                 });
                 break;
             }
-        };
+        }
 
         return(
             <div id="headContainer">
@@ -370,7 +371,7 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
                     } />
                     {this.matchTypeAndGetElements()}
                     <CardFooter>
-                        <Checkbox label={"Finale?"} onChange={(_ev, data) => this.updateToFinale(data)} />
+                        <Checkbox label={"Finale?"} onChange={(_ev, data) => this.updateToFinale(data)} defaultChecked={this.dataSelf.table_is_finale} />
                     </CardFooter>
                 </Card>
                 <Dialog open={this.state.dialogOpen} onOpenChange={(_ev, data) => this.setState({dialogOpen: data.open})}>

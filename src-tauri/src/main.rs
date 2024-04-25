@@ -4,12 +4,12 @@
 #![allow(non_snake_case)]
 
 use std::path::PathBuf;
-use std::process::exit;
-use std::sync::Mutex;
 use std::collections::HashMap;
+use std::env;
+use std::fs::File;
 use tauri::{AppHandle, State};
 use crate::FFI::create_tables_docx;
-use crate::types::{ApplicationError, FrontendStorage, Kampfgericht, Kampfrichter, Storage};
+use crate::types::{ApplicationError, FrontendStorage, Storage};
 
 /// Declares the usage of crate-wide modules.
 mod types;
@@ -121,7 +121,7 @@ async fn create_wettkampf(app_handle: AppHandle) -> ApplicationError {
 /// Syncs the initial WK data and hands off to the GUI WK Editor.
 /// Param 1: FrontendStorage data struct (provided by the Frontend) through serde::Deserialize
 /// Param 2: State<'_ Storage> global storage provided by Tauri.
-/// Returns: A Result always containing a Ok(ApplicationError) value - never void or something went terribly wrong.
+/// Returns: A Result always containing an Ok(ApplicationError) value - never void or something went terribly wrong.
 /// CAVEATS: async functions cannot simply use borrowed data like State<T>, so we need the anonymous lifetime specifier "'_" and have to return a Result.
 #[tauri::command]
 async fn sync_wk_data_and_open_editor(data: FrontendStorage, storage: State<'_, Storage>, app_handle: AppHandle) -> Result<ApplicationError, ()> {
@@ -231,7 +231,7 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<Frontend
     match storage.wk_replacement_judges.lock() {
         Ok(guard) => {
             if guard.is_empty() {
-                frontend_storage.wk_replacement_judges = None;
+                frontend_storage.wk_replacement_judges = Some(Vec::new());
             } else {
                 frontend_storage.wk_replacement_judges = Some((*guard).clone());
             }
@@ -242,7 +242,7 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<Frontend
     match storage.wk_judgingtables.lock() {
         Ok(guard) => {
             if guard.is_empty() {
-                frontend_storage.wk_judgingtables = None;
+                frontend_storage.wk_judgingtables = Some(HashMap::new());
             } else {
                 frontend_storage.wk_judgingtables = Some((*guard).clone());
             }
@@ -405,7 +405,7 @@ async fn sync_to_backend_and_create_docx(frontendstorage: FrontendStorage, filep
 }
 
 #[tauri::command]
-async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepath: String, storage: State<'_, Storage>) -> Result<ApplicationError, ()> {
+async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, _filepath: String, storage: State<'_, Storage>) -> Result<ApplicationError, ()> {
 
     match storage.wk_name.lock() {
         Ok(mut guard) => {
@@ -473,12 +473,126 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
 
 }
 
+// Function for loading a file from disk and importing this into frontend storage
+// Then open the editor
+#[tauri::command]
+async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Storage>, app_handle: AppHandle) -> Result <ApplicationError, ()> {
+
+    // Deserialize the file
+    let imported_storage: Storage = match serde_json::from_reader(File::open(filepath).unwrap()) {
+        Ok(storage) => {storage},
+        Err(_err) => {return Ok(ApplicationError::JSONDeserializeImporterError)},
+    };
+
+    // Update the storage
+    match storage.wk_name.lock() {
+        Ok(mut guard) => {
+            *guard = imported_storage.wk_name.lock().unwrap().clone();
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_place.lock() {
+        Ok(mut guard) => {
+            *guard = imported_storage.wk_place.lock().unwrap().clone();
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_date.lock() {
+        Ok(mut guard) => {
+            *guard = imported_storage.wk_date.lock().unwrap().clone();
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_judgesmeeting_time.lock() {
+        Ok(mut guard) => {
+            *guard = imported_storage.wk_judgesmeeting_time.lock().unwrap().clone();
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_responsible_person.lock() {
+        Ok(mut guard) => {
+            *guard = imported_storage.wk_responsible_person.lock().unwrap().clone();
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_replacement_judges.lock() {
+        Ok(mut guard) => {
+            *guard = imported_storage.wk_replacement_judges.lock().unwrap().clone();
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    match storage.wk_judgingtables.lock() {
+        Ok(mut guard) => {
+            *guard = imported_storage.wk_judgingtables.lock().unwrap().clone();
+            drop(guard);
+        },
+        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+    }
+
+    // Open the Editor!
+    let editor_window = match tauri::WindowBuilder::new(&app_handle, "editor", tauri::WindowUrl::App(PathBuf::from("editor.html")))
+        .inner_size(1250.0, 800.0)
+        .title(format!["{} (gespeichert)", imported_storage.wk_name.lock().unwrap()])
+        .focused(true)
+        .center()
+        .build()
+    {
+        Ok(window) => {window},
+        Err(_err) => return Ok(ApplicationError::TauriWindowCreationError),
+    };
+    match editor_window.show() {
+        Ok(()) => {},
+        Err(_err) => return Ok(ApplicationError::TauriWindowShowError),
+    }
+
+    return Ok(ApplicationError::NoError);
+}
+
 // MARK: Main Function
 /// Main application entry function.
 fn main() {
+
+    // Pack files at compile time and write them to disk at runtime... Currently the only way to embed files within the binary cross-platform
+    #[cfg(target_family = "unix")]
+    let template_file_binary = include_bytes!(r"../../res/Vorlage_Einsatzplan_Leer.docx");
+    #[cfg(target_family = "windows")]
+        let template_file_binary = include_bytes!(r"..\..\res\Vorlage_Einsatzplan_Leer.docx");
+
+    // Get Program Directory at Runtime
+    match env::current_exe() {
+        Ok(exe_path) => {
+            let parent_folder = exe_path.parent().unwrap().parent().unwrap().to_path_buf();
+            let resource_folder = parent_folder.join("Resources");
+            if !resource_folder.exists() {
+                match std::fs::create_dir(resource_folder.clone()) {
+                    Ok(()) => {}
+                    Err(e) => panic!("Could not create the Resource folder: {e}"),
+                };
+            }
+            // Write file at path!
+            match std::fs::write(resource_folder.join("Vorlage_Einsatzplan_Leer.docx"), template_file_binary) {
+                Ok(()) => {},
+                Err(e) => panic!("Could not write the template file: {e}"),
+            }
+        },
+        Err(e) => panic!("Could not get the current executable path: {e}"),
+    };
+
     tauri::Builder::default()
         .manage(Storage::default())
-        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf])
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor])
         .setup(|_app| {
             Ok(())
         })

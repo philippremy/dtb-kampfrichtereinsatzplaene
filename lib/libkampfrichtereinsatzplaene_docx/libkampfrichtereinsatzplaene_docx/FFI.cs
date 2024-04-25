@@ -42,7 +42,7 @@ public class FFI
             if (rawJSONData == null) return ApplicationError.MarshalJSONNullError;
             storage = JsonSerializer.Deserialize<Storage>(rawJSONData, SourceGenerationContextStorage.Default.Storage);
             
-            savePath = Marshal.PtrToStringAuto(json_data);
+            savePath = Marshal.PtrToStringAuto(save_path);
             if (savePath == null) return ApplicationError.MarshalSavePathNullError;
         }
         catch (Exception e)
