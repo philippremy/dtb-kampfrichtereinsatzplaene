@@ -7,8 +7,7 @@
     "withGlobalTauri": false
   },
   "package": {
-    "productName": "DTB Kampfrichtereinsatzpläne",
-    "version": "0.0.0"
+    "productName": "DTB Kampfrichtereinsatzpläne"
   },
   "tauri": {
     "allowlist": {
