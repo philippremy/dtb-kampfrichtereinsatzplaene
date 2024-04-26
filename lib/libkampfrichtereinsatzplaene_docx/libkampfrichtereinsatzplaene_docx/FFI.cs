@@ -38,16 +38,16 @@ public class FFI
         
         try
         {
-            string? rawJSONData = Marshal.PtrToStringAuto(json_data);
+            string? rawJSONData = Marshal.PtrToStringUTF8(json_data);
             if (rawJSONData == null) return ApplicationError.MarshalJSONNullError;
             storage = JsonSerializer.Deserialize<Storage>(rawJSONData, SourceGenerationContextStorage.Default.Storage);
             
-            savePath = Marshal.PtrToStringAuto(save_path);
+            savePath = Marshal.PtrToStringUTF8(save_path);
             if (savePath == null) return ApplicationError.MarshalSavePathNullError;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
+            Console.WriteLine(e);
             return e switch
             {
                 ArgumentNullException => ApplicationError.DeserializeArgumentNullError,
