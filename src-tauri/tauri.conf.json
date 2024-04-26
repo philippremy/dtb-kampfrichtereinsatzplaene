@@ -84,7 +84,14 @@
         "allowDowngrades": true,
         "certificateThumbprint": null,
         "digestAlgorithm": null,
-        "nsis": null,
+        "nsis": {
+          "license": "../installer/LICENSE.rtf",
+          "installerIcon": "icons/icon.ico",
+          "displayLanguageSelector": true,
+          "compression": "lzma",
+          "headerImage": "../installer/headerImage.bmp",
+          "sidebarImage": "../installer/sidebarImage.bmp"
+        },
         "timestampUrl": null,
         "tsp": false,
         "webviewFixedRuntimePath": null,
@@ -92,7 +99,12 @@
           "silent": true,
           "type": "embedBootstrapper"
         },
-        "wix": null
+        "wix": {
+          "license": "../installer/LICENSE.rtf",
+          "bannerPath": "../installer/bannerImage.bmp",
+          "dialogImagePath": "../installer/dialogImage.bmp",
+          "language": ["en-US", "de-DE"]
+        }
       }
     },
     "security": {
