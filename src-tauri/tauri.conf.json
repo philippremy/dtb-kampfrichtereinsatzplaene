@@ -72,12 +72,12 @@
         "icons/icon.ico"
       ],
       "copyright": "© Philipp Remy 2024",
-      "shortDescription": "Ein Programm zur Erstellung von Kampfrichtereinsatzplänen im Rhönradturnen",
+      "shortDescription": "Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB",
       "category": "Utilities",
       "publisher": "Philipp Remy",
       "macOS": {
         "minimumSystemVersion": "10.13",
-        "license": "GNU General Public License 3 (GPLv3)",
+        "license": "../LICENSE.txt",
         "frameworks": ["../lib/libkampfrichtereinsatzplaene_docx/build/libkampfrichtereinsatzplaene_docx.dylib"]
       },
       "windows": {
