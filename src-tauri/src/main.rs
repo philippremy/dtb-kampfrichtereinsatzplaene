@@ -12,7 +12,7 @@ use crate::FFI::create_tables_docx;
 use crate::types::{ApplicationError, FrontendStorage, Storage};
 
 // Windows only!
-#[cfg(target_arch = "windows")]
+#[cfg(target_os = "windows")]
 use directories::BaseDirs;
 
 /// Declares the usage of crate-wide modules.
@@ -569,16 +569,16 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
 fn main() {
 
     // Pack files at compile time and write them to disk at runtime... Currently the only way to embed files within the binary cross-platform
-    #[cfg(target_family = "unix")]
+    #[cfg(not(target_os = "windows"))]
     let template_file_binary = include_bytes!(r"../../res/Vorlage_Einsatzplan_Leer.docx");
-    #[cfg(target_family = "unix")]
+    #[cfg(not(target_os = "windows"))]
     let table_file_binary = include_bytes!(r"../../res/Tabelle_Vorlage_Leer.docx");
-    #[cfg(target_family = "windows")]
+    #[cfg(target_os = "windows")]
         let template_file_binary = include_bytes!(r"..\..\res\Vorlage_Einsatzplan_Leer.docx");
-    #[cfg(target_family = "windows")]
+    #[cfg(target_os = "windows")]
         let table_file_binary = include_bytes!(r"..\..\res\Tabelle_Vorlage_Leer.docx");
 
-    #[cfg(not(target_family = "windows"))]
+    #[cfg(not(target_os = "windows"))]
     // Get Program Directory at Runtime
     match env::current_exe() {
         Ok(exe_path) => {
@@ -606,12 +606,19 @@ fn main() {
 
     // Severe permission issues on Windows when using the approach above. Windows has unique folders to store application data.
     // Program Directory is not the place for that.
-    #[cfg(target_arch = "windows")]
+    #[cfg(target_os = "windows")]
     match directories::BaseDirs::new() {
         None => {panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.")}
         Some(dirs) => {
             let appdata_roaming_dir = dirs.data_dir();
             let application_resources_dir = appdata_roaming_dir.join("DTB Kampfrichtereinsatzpläne/Resources");
+            // Create the folder if it does not exist!
+            match std::fs::create_dir_all(application_resources_dir) {
+                Ok(()) => {}
+                Err(err) => {
+                    panic!("Could not create the AppData dir: {:?}", err);
+                }
+            }
             // Copy the stuff to there and we should be good to go.
             // Write file at path!
             match std::fs::write(application_resources_dir.join("Vorlage_Einsatzplan_Leer.docx"), template_file_binary) {
