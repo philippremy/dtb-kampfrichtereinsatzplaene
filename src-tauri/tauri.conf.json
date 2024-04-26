@@ -72,7 +72,8 @@
         "icons/icon.ico"
       ],
       "copyright": "© Philipp Remy 2024",
-      "shortDescription": "Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB",
+      "shortDescription": "DTB Kampfrichtereinsatzpläne",
+      "longDescription": "Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB",
       "category": "Utilities",
       "publisher": "Philipp Remy",
       "macOS": {

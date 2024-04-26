@@ -7,13 +7,16 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Menu, MenuItem, State};
 use crate::FFI::create_tables_docx;
 use crate::types::{ApplicationError, FrontendStorage, Storage};
 
 /// Declares the usage of crate-wide modules.
 mod types;
 mod FFI;
+
+// Statics
+static VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // MARK: Func: Update Storage Data
 /// Function to update the global storage from the frontend.
@@ -100,10 +103,59 @@ fn update_storage_data(frontend_storage: FrontendStorage, storage: State<Storage
 /// Tauri Command for creating a window that creates a new Wettkampf
 #[tauri::command]
 async fn create_wettkampf(app_handle: AppHandle) -> ApplicationError {
+
+    // Create all the Menus
+    let mut window_menu = tauri::Menu::new();
+    let about_menu: tauri::MenuItem = tauri::MenuItem::About("DTB Kampfrichtereinsatzpläne".to_string(), tauri::AboutMetadata::new()
+        .authors(vec!["Philipp Remy <philipp.remy@dtb.de>".to_string()])
+        .license("GPL-3.0-only".to_string())
+        .copyright("© Philipp Remy 2024".to_string())
+        .comments("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB".to_string())
+        .version(VERSION.to_string())
+        .website("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene".to_string())
+        .website_label("GitHub Repository".to_string())
+    );
+    let help_menu_item = tauri::CustomMenuItem::new("help", "Hilfe");
+    let whats_new_item = tauri::CustomMenuItem::new("whatsnew", "Was ist neu?");
+    let contact_support_item = tauri::CustomMenuItem::new("contactSupport", "Support kontaktieren");
+    let bug_report_item = tauri::CustomMenuItem::new("bugReport", "Bug melden");
+    let feedback_item = tauri::CustomMenuItem::new("feedback", "Feedback geben");
+    let log_item = tauri::CustomMenuItem::new("showLogs", "Logs anzeigen");
+    let licenses_item = tauri::CustomMenuItem::new("showLicenses", "Open Source Lizenzen anzeigen");
+    let other_submenu = tauri::Submenu::new("Sonstiges", Menu::new()
+        .add_item(help_menu_item)
+        .add_item(whats_new_item)
+        .add_native_item(MenuItem::Separator)
+        .add_item(contact_support_item)
+        .add_item(bug_report_item)
+        .add_item(feedback_item)
+        .add_native_item(MenuItem::Separator)
+        .add_item(log_item)
+        .add_native_item(MenuItem::Separator)
+        .add_item(licenses_item)
+    );
+    let application_submenu = tauri::Submenu::new("DTB Kampfrichtereinsatzpläne".to_string(), Menu::new()
+        .add_native_item(about_menu)
+        .add_native_item(MenuItem::Separator)
+        .add_native_item(MenuItem::Services)
+        .add_native_item(MenuItem::Separator)
+        .add_native_item(MenuItem::Hide)
+        .add_native_item(MenuItem::Minimize)
+        .add_native_item(MenuItem::EnterFullScreen)
+        .add_native_item(MenuItem::Separator)
+        .add_native_item(MenuItem::CloseWindow)
+        .add_native_item(MenuItem::Quit)
+    );
+
+    // Build them
+    window_menu = window_menu.add_submenu(application_submenu);
+    window_menu = window_menu.add_submenu(other_submenu);
+
     let create_wettkampf_window = match tauri::WindowBuilder::new(&app_handle, "createWettkampf", tauri::WindowUrl::App(PathBuf::from("createWettkampf.html")))
         .inner_size(515.0, 600.0)
         .title("Wettkampf erstellen")
         .focused(true)
+        .menu(window_menu)
         .center()
         .build()
     {
@@ -166,12 +218,72 @@ async fn sync_wk_data_and_open_editor(data: FrontendStorage, storage: State<'_, 
         Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
     }
 
+    // Create all the Menus
+    let mut window_menu = tauri::Menu::new();
+    let about_menu: tauri::MenuItem = tauri::MenuItem::About("DTB Kampfrichtereinsatzpläne".to_string(), tauri::AboutMetadata::new()
+        .authors(vec!["Philipp Remy <philipp.remy@dtb.de>".to_string()])
+        .license("GPL-3.0-only".to_string())
+        .copyright("© Philipp Remy 2024".to_string())
+        .comments("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB".to_string())
+        .version(VERSION.to_string())
+        .website("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene".to_string())
+        .website_label("GitHub Repository".to_string())
+    );
+    let save_wk_menu = tauri::CustomMenuItem::new("saveWk", "Wettkampf speichern...");
+    let save_wk_under_menu = tauri::CustomMenuItem::new("saveWkUnder", "Wettkampf speichern unter...");
+    let create_docx_menu = tauri::CustomMenuItem::new("createDocx", "Pläne als .docx speichern...");
+    let create_pdf_menu = tauri::CustomMenuItem::new("createPdf", "Pläne als .pdf speichern...");
+    let file_submenu = tauri::Submenu::new("Aktionen", Menu::new()
+        .add_item(save_wk_menu)
+        .add_item(save_wk_under_menu)
+        .add_native_item(MenuItem::Separator)
+        .add_item(create_docx_menu)
+        .add_item(create_pdf_menu)
+    );
+    let help_menu_item = tauri::CustomMenuItem::new("help", "Hilfe");
+    let whats_new_item = tauri::CustomMenuItem::new("whatsnew", "Was ist neu?");
+    let contact_support_item = tauri::CustomMenuItem::new("contactSupport", "Support kontaktieren");
+    let bug_report_item = tauri::CustomMenuItem::new("bugReport", "Bug melden");
+    let feedback_item = tauri::CustomMenuItem::new("feedback", "Feedback geben");
+    let log_item = tauri::CustomMenuItem::new("showLogs", "Logs anzeigen");
+    let licenses_item = tauri::CustomMenuItem::new("showLicenses", "Open Source Lizenzen anzeigen");
+    let other_submenu = tauri::Submenu::new("Sonstiges", Menu::new()
+        .add_item(help_menu_item)
+        .add_item(whats_new_item)
+        .add_native_item(MenuItem::Separator)
+        .add_item(contact_support_item)
+        .add_item(bug_report_item)
+        .add_item(feedback_item)
+        .add_native_item(MenuItem::Separator)
+        .add_item(log_item)
+        .add_native_item(MenuItem::Separator)
+        .add_item(licenses_item)
+    );
+    let application_submenu = tauri::Submenu::new("DTB Kampfrichtereinsatzpläne".to_string(), Menu::new()
+        .add_native_item(about_menu)
+        .add_native_item(MenuItem::Separator)
+        .add_native_item(MenuItem::Services)
+        .add_native_item(MenuItem::Separator)
+        .add_native_item(MenuItem::Hide)
+        .add_native_item(MenuItem::Minimize)
+        .add_native_item(MenuItem::EnterFullScreen)
+        .add_native_item(MenuItem::Separator)
+        .add_native_item(MenuItem::CloseWindow)
+        .add_native_item(MenuItem::Quit)
+    );
+
+    // Build them
+    window_menu = window_menu.add_submenu(application_submenu);
+    window_menu = window_menu.add_submenu(file_submenu);
+    window_menu = window_menu.add_submenu(other_submenu);
+
     // Create the Editor Window
     let editor_window = match tauri::WindowBuilder::new(&app_handle, "editor", tauri::WindowUrl::App(PathBuf::from("editor.html")))
     .inner_size(1250.0, 800.0)
     .title(format!["{} (nicht gespeichert)", data.wk_name])
     .focused(true)
     .center()
+    .menu(window_menu)
     .build()
     {
         Ok(window) => {window},
@@ -541,12 +653,72 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
         Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
     }
 
+    // Create all the Menus
+    let mut window_menu = tauri::Menu::new();
+    let about_menu: tauri::MenuItem = tauri::MenuItem::About("DTB Kampfrichtereinsatzpläne".to_string(), tauri::AboutMetadata::new()
+        .authors(vec!["Philipp Remy <philipp.remy@dtb.de>".to_string()])
+        .license("GPL-3.0-only".to_string())
+        .copyright("© Philipp Remy 2024".to_string())
+        .comments("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB".to_string())
+        .version(VERSION.to_string())
+        .website("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene".to_string())
+        .website_label("GitHub Repository".to_string())
+    );
+    let save_wk_menu = tauri::CustomMenuItem::new("saveWk", "Wettkampf speichern...");
+    let save_wk_under_menu = tauri::CustomMenuItem::new("saveWkUnder", "Wettkampf speichern unter...");
+    let create_docx_menu = tauri::CustomMenuItem::new("createDocx", "Pläne als .docx speichern...");
+    let create_pdf_menu = tauri::CustomMenuItem::new("createPdf", "Pläne als .pdf speichern...");
+    let file_submenu = tauri::Submenu::new("Aktionen", Menu::new()
+        .add_item(save_wk_menu)
+        .add_item(save_wk_under_menu)
+        .add_native_item(MenuItem::Separator)
+        .add_item(create_docx_menu)
+        .add_item(create_pdf_menu)
+    );
+    let help_menu_item = tauri::CustomMenuItem::new("help", "Hilfe");
+    let whats_new_item = tauri::CustomMenuItem::new("whatsnew", "Was ist neu?");
+    let contact_support_item = tauri::CustomMenuItem::new("contactSupport", "Support kontaktieren");
+    let bug_report_item = tauri::CustomMenuItem::new("bugReport", "Bug melden");
+    let feedback_item = tauri::CustomMenuItem::new("feedback", "Feedback geben");
+    let log_item = tauri::CustomMenuItem::new("showLogs", "Logs anzeigen");
+    let licenses_item = tauri::CustomMenuItem::new("showLicenses", "Open Source Lizenzen anzeigen");
+    let other_submenu = tauri::Submenu::new("Sonstiges", Menu::new()
+        .add_item(help_menu_item)
+        .add_item(whats_new_item)
+        .add_native_item(MenuItem::Separator)
+        .add_item(contact_support_item)
+        .add_item(bug_report_item)
+        .add_item(feedback_item)
+        .add_native_item(MenuItem::Separator)
+        .add_item(log_item)
+        .add_native_item(MenuItem::Separator)
+        .add_item(licenses_item)
+    );
+    let application_submenu = tauri::Submenu::new("DTB Kampfrichtereinsatzpläne".to_string(), Menu::new()
+        .add_native_item(about_menu)
+        .add_native_item(MenuItem::Separator)
+        .add_native_item(MenuItem::Services)
+        .add_native_item(MenuItem::Separator)
+        .add_native_item(MenuItem::Hide)
+        .add_native_item(MenuItem::Minimize)
+        .add_native_item(MenuItem::EnterFullScreen)
+        .add_native_item(MenuItem::Separator)
+        .add_native_item(MenuItem::CloseWindow)
+        .add_native_item(MenuItem::Quit)
+    );
+
+    // Build them
+    window_menu = window_menu.add_submenu(application_submenu);
+    window_menu = window_menu.add_submenu(file_submenu);
+    window_menu = window_menu.add_submenu(other_submenu);
+
     // Open the Editor!
     let editor_window = match tauri::WindowBuilder::new(&app_handle, "editor", tauri::WindowUrl::App(PathBuf::from("editor.html")))
         .inner_size(1250.0, 800.0)
         .title(format!["{} (gespeichert)", imported_storage.wk_name.lock().unwrap()])
         .focused(true)
         .center()
+        .menu(window_menu)
         .build()
     {
         Ok(window) => {window},
@@ -629,7 +801,62 @@ fn main() {
         }
     }
 
+    // Create all the Menus
+    let mut window_menu = tauri::Menu::new();
+    let about_menu: tauri::MenuItem = tauri::MenuItem::About("DTB Kampfrichtereinsatzpläne".to_string(), tauri::AboutMetadata::new()
+        .authors(vec!["Philipp Remy <philipp.remy@dtb.de>".to_string()])
+        .license("GPL-3.0-only".to_string())
+        .copyright("© Philipp Remy 2024".to_string())
+        .comments("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB".to_string())
+        .version(VERSION.to_string())
+        .website("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene".to_string())
+        .website_label("GitHub Repository".to_string())
+    );
+    let open_wk_menu = tauri::CustomMenuItem::new("openWk", "Wettkampf öffnen");
+    let create_wk_menu = tauri::CustomMenuItem::new("createWk", "Wettkampf erstellen");
+    let file_submenu = tauri::Submenu::new("Aktionen", Menu::new()
+        .add_item(create_wk_menu)
+        .add_item(open_wk_menu)
+    );
+    let help_menu_item = tauri::CustomMenuItem::new("help", "Hilfe");
+    let whats_new_item = tauri::CustomMenuItem::new("whatsnew", "Was ist neu?");
+    let contact_support_item = tauri::CustomMenuItem::new("contactSupport", "Support kontaktieren");
+    let bug_report_item = tauri::CustomMenuItem::new("bugReport", "Bug melden");
+    let feedback_item = tauri::CustomMenuItem::new("feedback", "Feedback geben");
+    let log_item = tauri::CustomMenuItem::new("showLogs", "Logs anzeigen");
+    let licenses_item = tauri::CustomMenuItem::new("showLicenses", "Open Source Lizenzen anzeigen");
+    let other_submenu = tauri::Submenu::new("Sonstiges", Menu::new()
+        .add_item(help_menu_item)
+        .add_item(whats_new_item)
+        .add_native_item(MenuItem::Separator)
+        .add_item(contact_support_item)
+        .add_item(bug_report_item)
+        .add_item(feedback_item)
+        .add_native_item(MenuItem::Separator)
+        .add_item(log_item)
+        .add_native_item(MenuItem::Separator)
+        .add_item(licenses_item)
+    );
+    let application_submenu = tauri::Submenu::new("DTB Kampfrichtereinsatzpläne".to_string(), Menu::new()
+        .add_native_item(about_menu)
+        .add_native_item(MenuItem::Separator)
+        .add_native_item(MenuItem::Services)
+        .add_native_item(MenuItem::Separator)
+        .add_native_item(MenuItem::Hide)
+        .add_native_item(MenuItem::Minimize)
+        .add_native_item(MenuItem::EnterFullScreen)
+        .add_native_item(MenuItem::Separator)
+        .add_native_item(MenuItem::CloseWindow)
+        .add_native_item(MenuItem::Quit)
+    );
+
+    // Build them
+    window_menu = window_menu.add_submenu(application_submenu);
+    window_menu = window_menu.add_submenu(file_submenu);
+    window_menu = window_menu.add_submenu(other_submenu);
+
     tauri::Builder::default()
+        .menu(window_menu)
         .manage(Storage::default())
         .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor])
         .setup(|_app| {
