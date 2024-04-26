@@ -1,7 +1,7 @@
 {
   "tauri": {
     "bundle": {
-      "resources": ["../lib/libkampfrichtereinsatzplaene_docx/build/libkampfrichtereinsatzplaene_docx.dll"]
+      "resources": ["../lib/libkampfrichtereinsatzplaene_docx/build/kampfrichtereinsatzplaene_docx.dll"]
     }
   }
 }
