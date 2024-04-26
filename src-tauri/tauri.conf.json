@@ -89,8 +89,9 @@
           "installerIcon": "icons/icon.ico",
           "displayLanguageSelector": true,
           "compression": "lzma",
-          "headerImage": "../installer/headerImage.bmp",
-          "sidebarImage": "../installer/sidebarImage.bmp"
+          "headerImage": "../installer/headerImage.png",
+          "sidebarImage": "../installer/sidebarImage.png",
+          "languages": ["German", "English"]
         },
         "timestampUrl": null,
         "tsp": false,
