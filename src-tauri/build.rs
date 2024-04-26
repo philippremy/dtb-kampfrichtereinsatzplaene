@@ -192,9 +192,8 @@ fn main() {
         };
         let win_static_library = ffi_library_main_dir.clone().join(format!("libkampfrichtereinsatzplaene_docx/bin/{target_arch_dotnet}/Release/net8.0/{dotnet_rid}/native/libkampfrichtereinsatzplaene_docx.lib"));
         std::fs::copy(win_static_library, ffi_library_main_dir.clone().join("build/kampfrichtereinsatzplaene_docx.lib")).unwrap();
-        std::fs::copy(build_shared_library, ffi_library_main_dir.clone().join("build/kampfrichtereinsatzplaene_docx.dll")).unwrap();
     }
-    
+
     // We finally have everything. God bless us. Let's set the linker flags.
     let build_shared_library_dir = ffi_library_main_dir.clone().join("build");
     println!("cargo:rustc-link-search=native={}", build_shared_library_dir.display());
