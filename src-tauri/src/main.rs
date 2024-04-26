@@ -574,6 +574,9 @@ fn main() {
     #[cfg(target_family = "windows")]
         let table_file_binary = include_bytes!(r"..\..\res\Tabelle_Vorlage_Leer.docx");
 
+    // Debug: Print Application Folder because I have no idea where this points to
+    println!("{:?}", directories::BaseDirs::new().unwrap().data_dir());
+
     // Get Program Directory at Runtime
     match env::current_exe() {
         Ok(exe_path) => {

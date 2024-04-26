@@ -54,7 +54,7 @@ public partial class DocumentWriter
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message + " : " + e.Source + " : " + e.Data);
+            Console.WriteLine(e);
             return ApplicationError.CSharpWriteError;
         }
         
@@ -64,8 +64,9 @@ public partial class DocumentWriter
     private void CopyTemplateToPath()
     {
         #if Windows
-            File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DTB Kampfrichtereinsatzpläne\Resources\Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
+            Console.WriteLine("We are on Windows!");
             Console.Writeln(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
+            File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DTB Kampfrichtereinsatzpläne\Resources\Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
         #else
             File.Copy(Path.Join(this.applicationFolder, @"../Resources/Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
         #endif
