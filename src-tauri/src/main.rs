@@ -11,6 +11,10 @@ use tauri::{AppHandle, State};
 use crate::FFI::create_tables_docx;
 use crate::types::{ApplicationError, FrontendStorage, Storage};
 
+// Windows only!
+#[cfg(target_arch = "windows")]
+use directories::BaseDirs;
+
 /// Declares the usage of crate-wide modules.
 mod types;
 mod FFI;
@@ -574,9 +578,7 @@ fn main() {
     #[cfg(target_family = "windows")]
         let table_file_binary = include_bytes!(r"..\..\res\Tabelle_Vorlage_Leer.docx");
 
-    // Debug: Print Application Folder because I have no idea where this points to
-    println!("{:?}", directories::BaseDirs::new().unwrap().data_dir());
-
+    #[cfg(target_family != "windows")]
     // Get Program Directory at Runtime
     match env::current_exe() {
         Ok(exe_path) => {
@@ -601,6 +603,28 @@ fn main() {
         },
         Err(e) => panic!("Could not get the current executable path: {e}"),
     };
+
+    // Severe permission issues on Windows when using the approach above. Windows has unique folders to store application data.
+    // Program Directory is not the place for that.
+    #[cfg(target_arch = "windows")]
+    match directories::BaseDirs::new() {
+        None => {panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.")}
+        Some(dirs) => {
+            let appdata_roaming_dir = dirs.data_dir();
+            let application_resources_dir = appdata_roaming_dir.join("DTB Kampfrichtereinsatzpläne/Resources");
+            // Copy the stuff to there and we should be good to go.
+            // Write file at path!
+            match std::fs::write(application_resources_dir.join("Vorlage_Einsatzplan_Leer.docx"), template_file_binary) {
+                Ok(()) => {},
+                Err(e) => panic!("Could not write the template file: {e}"),
+            }
+            // Write file at path!
+            match std::fs::write(application_resources_dir.join("Tabelle_Vorlage_Leer.docx"), table_file_binary) {
+                Ok(()) => {},
+                Err(e) => panic!("Could not write the table file: {e}"),
+            }
+        }
+    }
 
     tauri::Builder::default()
         .manage(Storage::default())
