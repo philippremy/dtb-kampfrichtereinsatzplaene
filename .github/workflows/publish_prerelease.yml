@@ -52,8 +52,6 @@ jobs:
 
       - name: install .NET 8.0
         uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.4'
 
       - uses: tauri-apps/tauri-action@v0
         env:
