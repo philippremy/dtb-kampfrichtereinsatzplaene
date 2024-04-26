@@ -11,10 +11,6 @@ use tauri::{AppHandle, State};
 use crate::FFI::create_tables_docx;
 use crate::types::{ApplicationError, FrontendStorage, Storage};
 
-// Windows only!
-#[cfg(target_os = "windows")]
-use directories::BaseDirs;
-
 /// Declares the usage of crate-wide modules.
 mod types;
 mod FFI;
@@ -613,7 +609,7 @@ fn main() {
             let appdata_roaming_dir = dirs.data_dir();
             let application_resources_dir = appdata_roaming_dir.join("DTB Kampfrichtereinsatzpläne/Resources");
             // Create the folder if it does not exist!
-            match std::fs::create_dir_all(application_resources_dir) {
+            match std::fs::create_dir_all(application_resources_dir.clone()) {
                 Ok(()) => {}
                 Err(err) => {
                     panic!("Could not create the AppData dir: {:?}", err);
@@ -621,12 +617,12 @@ fn main() {
             }
             // Copy the stuff to there and we should be good to go.
             // Write file at path!
-            match std::fs::write(application_resources_dir.join("Vorlage_Einsatzplan_Leer.docx"), template_file_binary) {
+            match std::fs::write(application_resources_dir.clone().join("Vorlage_Einsatzplan_Leer.docx"), template_file_binary) {
                 Ok(()) => {},
                 Err(e) => panic!("Could not write the template file: {e}"),
             }
             // Write file at path!
-            match std::fs::write(application_resources_dir.join("Tabelle_Vorlage_Leer.docx"), table_file_binary) {
+            match std::fs::write(application_resources_dir.clone().join("Tabelle_Vorlage_Leer.docx"), table_file_binary) {
                 Ok(()) => {},
                 Err(e) => panic!("Could not write the table file: {e}"),
             }
