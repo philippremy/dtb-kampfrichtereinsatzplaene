@@ -567,8 +567,12 @@ fn main() {
     // Pack files at compile time and write them to disk at runtime... Currently the only way to embed files within the binary cross-platform
     #[cfg(target_family = "unix")]
     let template_file_binary = include_bytes!(r"../../res/Vorlage_Einsatzplan_Leer.docx");
+    #[cfg(target_family = "unix")]
+    let table_file_binary = include_bytes!(r"../../res/Tabelle_Vorlage_Leer.docx");
     #[cfg(target_family = "windows")]
         let template_file_binary = include_bytes!(r"..\..\res\Vorlage_Einsatzplan_Leer.docx");
+    #[cfg(target_family = "windows")]
+        let table_file_binary = include_bytes!(r"..\..\res\Tabelle_Vorlage_Leer.docx");
 
     // Get Program Directory at Runtime
     match env::current_exe() {
@@ -585,6 +589,11 @@ fn main() {
             match std::fs::write(resource_folder.join("Vorlage_Einsatzplan_Leer.docx"), template_file_binary) {
                 Ok(()) => {},
                 Err(e) => panic!("Could not write the template file: {e}"),
+            }
+            // Write file at path!
+            match std::fs::write(resource_folder.join("Tabelle_Vorlage_Leer.docx"), table_file_binary) {
+                Ok(()) => {},
+                Err(e) => panic!("Could not write the table file: {e}"),
             }
         },
         Err(e) => panic!("Could not get the current executable path: {e}"),

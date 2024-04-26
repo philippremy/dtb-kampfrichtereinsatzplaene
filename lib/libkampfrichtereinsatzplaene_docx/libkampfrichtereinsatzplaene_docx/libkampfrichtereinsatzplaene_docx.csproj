@@ -17,6 +17,19 @@
         <UseNativeHttpHandler>true</UseNativeHttpHandler>
         <UseSystemResourceKeys>true</UseSystemResourceKeys>
         <PublishTrimmed>true</PublishTrimmed>
+        <IsWindows Condition="$(RuntimeIdentifier.StartsWith('win'))">true</IsWindows>
+        <IsLinux Condition="$(RuntimeIdentifier.StartsWith('linux'))">true</IsLinux>
+        <IsMacOS Condition="$(RuntimeIdentifier.StartsWith('osx'))">true</IsMacOS>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(IsWindows)'=='true'">
+        <DefineConstants>Windows</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(IsLinux)'=='true'">
+        <DefineConstants>Linux</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(IsMacOS)'=='true'">
+        <DefineConstants>MacOS</DefineConstants>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

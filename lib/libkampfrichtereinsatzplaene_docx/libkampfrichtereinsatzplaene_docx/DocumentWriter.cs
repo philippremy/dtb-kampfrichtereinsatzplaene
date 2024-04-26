@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace libkampfrichtereinsatzplaene_docx;
 
@@ -49,6 +50,7 @@ public partial class DocumentWriter
         {
             CopyTemplateToPath();
             SetWkDataInDocument();
+            RemoveAltersklassenRow();
         }
         catch (Exception e)
         {
@@ -60,8 +62,13 @@ public partial class DocumentWriter
     }
 
     private void CopyTemplateToPath()
-    { 
-        File.Copy(Path.Join(this.applicationFolder, @"../Resources/Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
+    {
+        #if Windows
+            File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DTB Kampfrichtereinsatzpläne\Resources\Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
+            Console.Writeln(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
+        #else
+            File.Copy(Path.Join(this.applicationFolder, @"../Resources/Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
+        #endif
     }
 
     private void SetWkDataInDocument()
@@ -88,7 +95,46 @@ public partial class DocumentWriter
             {
                 streamWriter.Write(documentText);
             }
+            
+            // Save the document
+            document.Save();
         }
     }
+    
+    // TEMP: Remove row where Altersklassen will be specified in the future!
+    private void RemoveAltersklassenRow()
+    {
+        using (WordprocessingDocument document = WordprocessingDocument.Open(this.savePath, true))
+        {
+            if (document.MainDocumentPart is null)
+            {
+                throw new ArgumentNullException("MainDocumentPart of template file is null.");
+            }
+            if (document.MainDocumentPart.Document.Body is null)
+            {
+                throw new ArgumentNullException("Body of template file is null.");
+            }
+            var tables = document.MainDocumentPart.Document.Descendants<Table>().ToList();
+            List<TableCell> cellList = new List<TableCell>();
+            foreach (Table t in tables)
+            {
+                var rows = t.Elements<TableRow>();
+                foreach (TableRow row in rows)
+                {
+                    var cells = row.Elements<TableCell>();
+                    foreach (TableCell cell in cells) 
+                        cellList.Add(cell);
+                }
+            }
+
+            var q = from c in cellList where c.InnerText == "### Altersklassen ###" select c.Parent;
+            q.First().Remove();
+        }
+    }
+    
+}
+
+public partial class TableHandler
+{
     
 }
