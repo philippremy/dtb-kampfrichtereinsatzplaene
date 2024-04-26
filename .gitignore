@@ -138,3 +138,21 @@ dist
 /lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/bin
 /lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/obj/*
 /lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/obj
+
+# Local IDE files
+/.vscode
+/.vscode/*
+.vscode
+.vscode/*
+*/.vscode/
+*/.vscode/*
+/.idea
+/.idea/*
+.idea
+.idea/*
+*/.idea/
+*/.idea/*
+
+
+
+
