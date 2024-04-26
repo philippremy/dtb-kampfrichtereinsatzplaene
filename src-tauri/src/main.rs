@@ -578,7 +578,7 @@ fn main() {
     #[cfg(target_family = "windows")]
         let table_file_binary = include_bytes!(r"..\..\res\Tabelle_Vorlage_Leer.docx");
 
-    #[cfg(target_family != "windows")]
+    #[cfg(not(target_family = "windows"))]
     // Get Program Directory at Runtime
     match env::current_exe() {
         Ok(exe_path) => {
