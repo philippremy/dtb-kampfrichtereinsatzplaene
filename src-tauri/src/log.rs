@@ -47,6 +47,40 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
         Err(e) => panic!("Could not get the current executable path: {e}"),
     };
 
+    // Severe permission issues on Windows when using the approach above. Windows has unique folders to store application data.
+    // Program Directory is not the place for that.
+    #[cfg(target_os = "windows")]
+    match directories::BaseDirs::new() {
+        None => {panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.")}
+        Some(dirs) => {
+            let appdata_roaming_dir = dirs.data_dir();
+            let application_log_dir = appdata_roaming_dir.join("DTB Kampfrichtereinsatzpläne/Logs");
+            // Create the folder if it does not exist!
+            match std::fs::create_dir_all(application_log_dir.clone()) {
+                Ok(()) => {}
+                Err(err) => {
+                    panic!("Could not create the AppData dir: {:?}", err);
+                }
+            }
+            // Create file for stdout
+            stdout_file = match File::create(application_log_dir.join(format!["LOG__{}__STDOUT.txt", time_and_date_string.clone()])) {
+                Ok(file) => {file}
+                Err(err) => {
+                    println!("{:?}", err);
+                    return Err(ApplicationError::FailedToCreateStdOutFileError);
+                }
+            };
+            // Create file for stdout
+            stderr_file = match File::create(application_log_dir.join(format!["LOG__{}__STDERR.txt", time_and_date_string.clone()])) {
+                Ok(file) => {file}
+                Err(err) => {
+                    println!("{:?}", err);
+                    return Err(ApplicationError::FailedToCreateStdErrFileError);
+                }
+            };
+        }
+    }
+
     // First, get the file descriptors
     let stdout_file_fd = stdout_file.as_raw_fd();
     let stderr_file_fd = stderr_file.as_raw_fd();
