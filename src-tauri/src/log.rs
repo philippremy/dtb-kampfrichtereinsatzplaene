@@ -1,13 +1,18 @@
-use std::{env, mem};
+use std::mem;
 use std::fs::File;
 use std::os::fd::AsRawFd;
 use chrono::{Datelike, Timelike};
 use crate::types::ApplicationError;
 
-pub fn activateLogging() -> Result<(), ApplicationError> {
+#[cfg(target_os = "windows")]
+use windows::Win32::System::Console::{GetStdHandle, SetStdHandle};
+#[cfg(target_os = "windows")]
+use windows::Win32::Devices::DeviceAndDriverInstallation::DWORD_MAX;
 
-    let stdout_fd = std::io::stdout().as_raw_fd();
-    let stderr_fd = std::io::stderr().as_raw_fd();
+#[cfg(not(target_os = "windows"))]
+use std::env;
+
+pub fn activateLogging() -> Result<(), ApplicationError> {
 
     let time_and_date = chrono::Local::now();
     let time_and_date_string = format!["{}-{}-{}_{}-{}-{}", time_and_date.year(), time_and_date.month(), time_and_date.day(), time_and_date.time().hour(), time_and_date.time().minute(), time_and_date.time().second()];
@@ -81,27 +86,65 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
         }
     }
 
-    // First, get the file descriptors
-    let stdout_file_fd = stdout_file.as_raw_fd();
-    let stderr_file_fd = stderr_file.as_raw_fd();
+    // Use file descriptors on Unix
+    #[cfg(not(target_os = "windows"))]
+    {
+        // First, get the file descriptors
+        let stdout_file_fd = stdout_file.as_raw_fd();
+        let stderr_file_fd = stderr_file.as_raw_fd();
+        let stdout_fd = std::io::stdout().as_raw_fd();
+        let stderr_fd = std::io::stderr().as_raw_fd();
 
-    // Forget about the files, so they don't get deallocated!
-    // They have to be available until the end of the program.
-    mem::forget(stdout_file);
-    mem::forget(stderr_file);
+        // Forget about the files, so they don't get deallocated!
+        // They have to be available until the end of the program.
+        mem::forget(stdout_file);
+        mem::forget(stderr_file);
 
-    // Now change the file handles and call it day.
-    unsafe {
-        let result_stdout = libc::dup2(stdout_file_fd, stdout_fd);
-        if result_stdout == -1 {
-            println!("errno: {:?}", std::io::Error::last_os_error());
-            return Err(ApplicationError::LibcDup2StdOutError);
-        }
-        let result_stderr = libc::dup2(stderr_file_fd, stderr_fd);
-        if result_stderr == -1 {
-            println!("errno: {:?}", std::io::Error::last_os_error());
-            return Err(ApplicationError::LibcDup2StdErrError);
+        // Now change the file handles and call it day.
+        unsafe {
+            let result_stdout = libc::dup2(stdout_file_fd, stdout_fd);
+            if result_stdout == -1 {
+                println!("errno: {:?}", std::io::Error::last_os_error());
+                return Err(ApplicationError::LibcDup2StdOutError);
+            }
+            let result_stderr = libc::dup2(stderr_file_fd, stderr_fd);
+            if result_stderr == -1 {
+                println!("errno: {:?}", std::io::Error::last_os_error());
+                return Err(ApplicationError::LibcDup2StdErrError);
+            }
         }
     }
+
+    // Use file handles on Windows
+    #[cfg(target_os = "windows")]
+    {
+        // First, get the file handles
+        let stdout_fh = GetStdHandle(DWORD_MAX - 11).unwrap();
+        let stderr_fh = GetStdHandle(DWORD_MAX - 12).unwrap();
+        let stdout_file_fh = stdout_file.as_raw_handle();
+        let stderr_file_fh = stderr_file.as_raw_handle();
+
+        // Forget about the files, so they don't get deallocated!
+        // They have to be available until the end of the program.
+        mem::forget(stdout_file);
+        mem::forget(stderr_file);
+
+        // Now change the file handles and call it day.
+        match SetStdHandle(DWORD_MAX - 11, stdout_file_fh) {
+            Ok(()) => {},
+            Err(err) => {
+                println!("errno: {:?}", err);
+                return Err(ApplicationError::LibcDup2StdOutError);
+            }
+        }
+        match SetStdHandle(DWORD_MAX - 12, stderr_file_fh) {
+            Ok(()) => {},
+            Err(err) => {
+                println!("errno: {:?}", err);
+                return Err(ApplicationError::LibcDup2StdErrError);
+            }
+        }
+    }
+
     return Ok(());
 }
