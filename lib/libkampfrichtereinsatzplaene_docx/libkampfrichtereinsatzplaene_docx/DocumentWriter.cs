@@ -108,7 +108,7 @@ public partial class DocumentWriter
                     }
                 } else
                 {
-                    if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1) || regularTablesWrittenToPage == 3)
+                    if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1) || regularTablesWrittenToPage == 3 || (firstPage && regularTablesWrittenToPage == 2))
                     {
                         insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
                         firstPage = false;
