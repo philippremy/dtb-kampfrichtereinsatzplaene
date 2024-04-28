@@ -291,8 +291,10 @@ checksum = "a21f936df1771bf62b77f047b726c4625ff2e8aa607c01ec06e5a05bd8463401"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-targets 0.52.5",
 ]
 
@@ -607,7 +609,9 @@ checksum = "bd0c93bb4b0c6d9b77f4435b0ae98c24d17f1c45b2ff844c6151a07256ca923b"
 name = "dtb-kampfrichtereinsatzplaene"
 version = "0.0.0"
 dependencies = [
+ "chrono",
  "directories",
+ "libc",
  "serde",
  "serde_json",
  "tauri",

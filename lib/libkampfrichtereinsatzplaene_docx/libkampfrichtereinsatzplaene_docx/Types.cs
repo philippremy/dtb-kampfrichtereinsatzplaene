@@ -64,4 +64,8 @@ public enum ApplicationError {
     StorageNullError = 12,
     CSharpWriteError = 13,
     JSONDeserializeImporterError = 14,
+    FailedToCreateStdOutFileError = 15,
+    FailedToCreateStdErrFileError = 16,
+    LibcDup2StdOutError = 17,
+    LibcDup2StdErrError = 18,
 }

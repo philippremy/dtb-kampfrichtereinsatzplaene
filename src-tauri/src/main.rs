@@ -14,6 +14,7 @@ use crate::types::{ApplicationError, FrontendStorage, Storage};
 /// Declares the usage of crate-wide modules.
 mod types;
 mod FFI;
+mod log;
 
 // Statics
 static VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -735,6 +736,14 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
 // MARK: Main Function
 /// Main application entry function.
 fn main() {
+
+    // Rebase all StdOut and StdErr happenings
+    match log::activateLogging() {
+        Ok(()) => {}
+        Err(err) => {
+            panic!("Could not redirect StdOut and StdErr successfully: {:?}", err);
+        }
+    }
 
     // Pack files at compile time and write them to disk at runtime... Currently the only way to embed files within the binary cross-platform
     #[cfg(not(target_os = "windows"))]
