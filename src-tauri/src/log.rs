@@ -1,16 +1,19 @@
 use std::mem;
 use std::fs::File;
-use std::os::fd::AsRawFd;
 use chrono::{Datelike, Timelike};
 use crate::types::ApplicationError;
 
 #[cfg(target_os = "windows")]
-use windows::Win32::System::Console::{GetStdHandle, SetStdHandle};
+use windows::Win32::System::Console::{SetStdHandle, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE};
 #[cfg(target_os = "windows")]
-use windows::Win32::Devices::DeviceAndDriverInstallation::DWORD_MAX;
+use std::os::windows::io::AsRawHandle;
+#[cfg(target_os = "windows")]
+use windows::Win32::Foundation::HANDLE;
 
 #[cfg(not(target_os = "windows"))]
 use std::env;
+#[cfg(not(target_os = "windows"))]
+use std::os::fd::AsRawFd;
 
 pub fn activateLogging() -> Result<(), ApplicationError> {
 
@@ -117,10 +120,8 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
 
     // Use file handles on Windows
     #[cfg(target_os = "windows")]
-    {
+    unsafe {
         // First, get the file handles
-        let stdout_fh = GetStdHandle(DWORD_MAX - 11).unwrap();
-        let stderr_fh = GetStdHandle(DWORD_MAX - 12).unwrap();
         let stdout_file_fh = stdout_file.as_raw_handle();
         let stderr_file_fh = stderr_file.as_raw_handle();
 
@@ -130,14 +131,14 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
         mem::forget(stderr_file);
 
         // Now change the file handles and call it day.
-        match SetStdHandle(DWORD_MAX - 11, stdout_file_fh) {
+        match SetStdHandle(STD_OUTPUT_HANDLE, HANDLE(stdout_file_fh as isize)) {
             Ok(()) => {},
             Err(err) => {
                 println!("errno: {:?}", err);
                 return Err(ApplicationError::LibcDup2StdOutError);
             }
         }
-        match SetStdHandle(DWORD_MAX - 12, stderr_file_fh) {
+        match SetStdHandle(STD_ERROR_HANDLE, HANDLE(stderr_file_fh as isize)) {
             Ok(()) => {},
             Err(err) => {
                 println!("errno: {:?}", err);
