@@ -122,43 +122,46 @@ public partial class DocumentWriter
                     }
                 }
             }
-            
-            // The last element will never be a page break we introduced using the foreach loop above, so always insert one
-            // Reset the counter
-            insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
-            musicTablesWrittenToPage = 0;
-            regularTablesWrittenToPage = 0;
-            
-            // Insert the final tables
-            foreach (Table finalTable in finalTables)
-            {
-                if (IsMusicTable(finalTable))
+
+            if (finalTables.Length != 0)
+            { 
+                // The last element will never be a page break we introduced using the foreach loop above, so always insert one
+                // Reset the counter
+                insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
+                musicTablesWrittenToPage = 0;
+                regularTablesWrittenToPage = 0;
+                
+                // Insert the final tables
+                foreach (Table finalTable in finalTables)
                 {
-                    if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1 ) || regularTablesWrittenToPage == 3 || (firstPage && musicTablesWrittenToPage == 1))
+                    if (IsMusicTable(finalTable))
                     {
-                        insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
-                        firstPage = false;
-                        insertMark = insertMark.InsertAfterSelf(finalTable);
-                        musicTablesWrittenToPage = 1; 
-                        regularTablesWrittenToPage = 0;
+                        if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1 ) || regularTablesWrittenToPage == 3 || (firstPage && musicTablesWrittenToPage == 1))
+                        {
+                            insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
+                            firstPage = false;
+                            insertMark = insertMark.InsertAfterSelf(finalTable);
+                            musicTablesWrittenToPage = 1; 
+                            regularTablesWrittenToPage = 0;
+                        } else
+                        {
+                            insertMark = insertMark.InsertAfterSelf(finalTable);
+                            musicTablesWrittenToPage++;
+                        }
                     } else
                     {
-                        insertMark = insertMark.InsertAfterSelf(finalTable);
-                        musicTablesWrittenToPage++;
-                    }
-                } else
-                {
-                    if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1) || regularTablesWrittenToPage == 3 || (firstPage && regularTablesWrittenToPage == 2))
-                    {
-                        insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
-                        firstPage = false;
-                        insertMark = insertMark.InsertAfterSelf(finalTable);
-                        musicTablesWrittenToPage = 0; 
-                        regularTablesWrittenToPage = 1;
-                    } else
-                    {
-                        insertMark = insertMark.InsertAfterSelf(finalTable);
-                        regularTablesWrittenToPage++;
+                        if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1) || regularTablesWrittenToPage == 3 || (firstPage && regularTablesWrittenToPage == 2))
+                        {
+                            insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
+                            firstPage = false;
+                            insertMark = insertMark.InsertAfterSelf(finalTable);
+                            musicTablesWrittenToPage = 0; 
+                            regularTablesWrittenToPage = 1;
+                        } else
+                        {
+                            insertMark = insertMark.InsertAfterSelf(finalTable);
+                            regularTablesWrittenToPage++;
+                        }
                     }
                 }
             }
