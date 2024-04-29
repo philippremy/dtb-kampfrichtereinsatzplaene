@@ -69,9 +69,9 @@ public partial class DocumentWriter
     private void CopyTemplateToPath()
     {
         #if Windows
-            File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DTB Kampfrichtereinsatzpläne\Resources\Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
+            File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene\Resources\Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
         #else
-            File.Copy(Path.Join(this.applicationFolder, @"../Resources/Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
+            File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
         #endif
     }
 
@@ -261,9 +261,9 @@ public class TableHandler
     private List<Kampfgericht> m_regular_tables;
     
     #if Windows
-        private string m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DTB Kampfrichtereinsatzpläne\Resources\Tabelle_Vorlage_Leer.docx");
+        private string m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene\Resources\Tabelle_Vorlage_Leer.docx");
     #else
-        private string m_pathToTableTemplate = Path.Join(System.AppContext.BaseDirectory, @"../Resources/Tabelle_Vorlage_Leer.docx");
+        private string m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Tabelle_Vorlage_Leer.docx");
     #endif
     
     public TableHandler(Kampfgericht[] kampfgerichte, string[]? replacementJudges)

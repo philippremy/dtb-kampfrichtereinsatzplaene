@@ -755,40 +755,11 @@ fn main() {
     #[cfg(target_os = "windows")]
         let table_file_binary = include_bytes!(r"..\..\res\Tabelle_Vorlage_Leer.docx");
 
-    #[cfg(not(target_os = "windows"))]
-    // Get Program Directory at Runtime
-    match env::current_exe() {
-        Ok(exe_path) => {
-            let parent_folder = exe_path.parent().unwrap().parent().unwrap().to_path_buf();
-            let resource_folder = parent_folder.join("Resources");
-            if !resource_folder.exists() {
-                match std::fs::create_dir(resource_folder.clone()) {
-                    Ok(()) => {}
-                    Err(e) => panic!("Could not create the Resource folder: {e}"),
-                };
-            }
-            // Write file at path!
-            match std::fs::write(resource_folder.join("Vorlage_Einsatzplan_Leer.docx"), template_file_binary) {
-                Ok(()) => {},
-                Err(e) => panic!("Could not write the template file: {e}"),
-            }
-            // Write file at path!
-            match std::fs::write(resource_folder.join("Tabelle_Vorlage_Leer.docx"), table_file_binary) {
-                Ok(()) => {},
-                Err(e) => panic!("Could not write the table file: {e}"),
-            }
-        },
-        Err(e) => panic!("Could not get the current executable path: {e}"),
-    };
-
-    // Severe permission issues on Windows when using the approach above. Windows has unique folders to store application data.
-    // Program Directory is not the place for that.
-    #[cfg(target_os = "windows")]
     match directories::BaseDirs::new() {
         None => {panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.")}
         Some(dirs) => {
             let appdata_roaming_dir = dirs.data_dir();
-            let application_resources_dir = appdata_roaming_dir.join("DTB Kampfrichtereinsatzpläne/Resources");
+            let application_resources_dir = appdata_roaming_dir.join("de.philippremy.dtb-kampfrichtereinsatzplaene").join("Resources");
             // Create the folder if it does not exist!
             match std::fs::create_dir_all(application_resources_dir.clone()) {
                 Ok(()) => {}
@@ -799,7 +770,7 @@ fn main() {
             // Copy the stuff to there and we should be good to go.
             // Write file at path!
             match std::fs::write(application_resources_dir.clone().join("Vorlage_Einsatzplan_Leer.docx"), template_file_binary) {
-                Ok(()) => {},
+                Ok(()) => {}
                 Err(e) => panic!("Could not write the template file: {e}"),
             }
             // Write file at path!
