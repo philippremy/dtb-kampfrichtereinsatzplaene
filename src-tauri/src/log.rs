@@ -11,8 +11,6 @@ use std::os::windows::io::AsRawHandle;
 use windows::Win32::Foundation::HANDLE;
 
 #[cfg(not(target_os = "windows"))]
-use std::env;
-#[cfg(not(target_os = "windows"))]
 use std::os::fd::AsRawFd;
 
 pub fn activateLogging() -> Result<(), ApplicationError> {
@@ -23,46 +21,13 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
     let stdout_file;
     let stderr_file;
 
-    #[cfg(not(target_os = "windows"))]
-    // Get Program Directory at Runtime
-    match env::current_exe() {
-        Ok(exe_path) => {
-            let parent_folder = exe_path.parent().unwrap().parent().unwrap().to_path_buf();
-            let log_folder = parent_folder.join("Logs");
-            if !log_folder.exists() {
-                match std::fs::create_dir_all(log_folder.clone()) {
-                    Ok(()) => {}
-                    Err(e) => panic!("Could not create the Resource folder: {e}"),
-                };
-            }
-            // Create file for stdout
-            stdout_file = match File::create(log_folder.join(format!["LOG__{}__STDOUT.txt", time_and_date_string.clone()])) {
-                Ok(file) => {file}
-                Err(err) => {
-                    println!("{:?}", err);
-                    return Err(ApplicationError::FailedToCreateStdOutFileError);
-                }
-            };
-            // Create file for stdout
-            stderr_file = match File::create(log_folder.join(format!["LOG__{}__STDERR.txt", time_and_date_string.clone()])) {
-                Ok(file) => {file}
-                Err(err) => {
-                    println!("{:?}", err);
-                    return Err(ApplicationError::FailedToCreateStdErrFileError);
-                }
-            };
-        },
-        Err(e) => panic!("Could not get the current executable path: {e}"),
-    };
-
     // Severe permission issues on Windows when using the approach above. Windows has unique folders to store application data.
     // Program Directory is not the place for that.
-    #[cfg(target_os = "windows")]
     match directories::BaseDirs::new() {
         None => {panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.")}
         Some(dirs) => {
             let appdata_roaming_dir = dirs.data_dir();
-            let application_log_dir = appdata_roaming_dir.join("DTB Kampfrichtereinsatzpläne/Logs");
+            let application_log_dir = appdata_roaming_dir.join("de.philippremy.dtb-kampfrichtereinsatzplaene").join("Logs");
             // Create the folder if it does not exist!
             match std::fs::create_dir_all(application_log_dir.clone()) {
                 Ok(()) => {}

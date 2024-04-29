@@ -69,9 +69,9 @@ public partial class DocumentWriter
     private void CopyTemplateToPath()
     {
         #if Windows
-            File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DTB Kampfrichtereinsatzpläne\Resources\Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
+            File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene\Resources\Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
         #else
-            File.Copy(Path.Join(this.applicationFolder, @"../Resources/Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
+            File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
         #endif
     }
 
@@ -122,43 +122,46 @@ public partial class DocumentWriter
                     }
                 }
             }
-            
-            // The last element will never be a page break we introduced using the foreach loop above, so always insert one
-            // Reset the counter
-            insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
-            musicTablesWrittenToPage = 0;
-            regularTablesWrittenToPage = 0;
-            
-            // Insert the final tables
-            foreach (Table finalTable in finalTables)
-            {
-                if (IsMusicTable(finalTable))
+
+            if (finalTables.Length != 0)
+            { 
+                // The last element will never be a page break we introduced using the foreach loop above, so always insert one
+                // Reset the counter
+                insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
+                musicTablesWrittenToPage = 0;
+                regularTablesWrittenToPage = 0;
+                
+                // Insert the final tables
+                foreach (Table finalTable in finalTables)
                 {
-                    if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1 ) || regularTablesWrittenToPage == 3 || (firstPage && musicTablesWrittenToPage == 1))
+                    if (IsMusicTable(finalTable))
                     {
-                        insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
-                        firstPage = false;
-                        insertMark = insertMark.InsertAfterSelf(finalTable);
-                        musicTablesWrittenToPage = 1; 
-                        regularTablesWrittenToPage = 0;
+                        if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1 ) || regularTablesWrittenToPage == 3 || (firstPage && musicTablesWrittenToPage == 1))
+                        {
+                            insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
+                            firstPage = false;
+                            insertMark = insertMark.InsertAfterSelf(finalTable);
+                            musicTablesWrittenToPage = 1; 
+                            regularTablesWrittenToPage = 0;
+                        } else
+                        {
+                            insertMark = insertMark.InsertAfterSelf(finalTable);
+                            musicTablesWrittenToPage++;
+                        }
                     } else
                     {
-                        insertMark = insertMark.InsertAfterSelf(finalTable);
-                        musicTablesWrittenToPage++;
-                    }
-                } else
-                {
-                    if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1) || regularTablesWrittenToPage == 3 || (firstPage && regularTablesWrittenToPage == 2))
-                    {
-                        insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
-                        firstPage = false;
-                        insertMark = insertMark.InsertAfterSelf(finalTable);
-                        musicTablesWrittenToPage = 0; 
-                        regularTablesWrittenToPage = 1;
-                    } else
-                    {
-                        insertMark = insertMark.InsertAfterSelf(finalTable);
-                        regularTablesWrittenToPage++;
+                        if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1) || regularTablesWrittenToPage == 3 || (firstPage && regularTablesWrittenToPage == 2))
+                        {
+                            insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
+                            firstPage = false;
+                            insertMark = insertMark.InsertAfterSelf(finalTable);
+                            musicTablesWrittenToPage = 0; 
+                            regularTablesWrittenToPage = 1;
+                        } else
+                        {
+                            insertMark = insertMark.InsertAfterSelf(finalTable);
+                            regularTablesWrittenToPage++;
+                        }
                     }
                 }
             }
@@ -261,9 +264,9 @@ public class TableHandler
     private List<Kampfgericht> m_regular_tables;
     
     #if Windows
-        private string m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"DTB Kampfrichtereinsatzpläne\Resources\Tabelle_Vorlage_Leer.docx");
+        private string m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene\Resources\Tabelle_Vorlage_Leer.docx");
     #else
-        private string m_pathToTableTemplate = Path.Join(System.AppContext.BaseDirectory, @"../Resources/Tabelle_Vorlage_Leer.docx");
+        private string m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Tabelle_Vorlage_Leer.docx");
     #endif
     
     public TableHandler(Kampfgericht[] kampfgerichte, string[]? replacementJudges)

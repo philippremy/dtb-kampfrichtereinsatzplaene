@@ -16,13 +16,13 @@
 
 #mainContents {
     width: calc(100vw - 40px);
-    min-height: calc(100vh - 115px);
+    height: calc(100vh - 115px);
     padding: 95px 20px 20px 20px;
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
     justify-content: space-between;
-    overflow: scroll;
+    overflow: auto;
 }
 
 .filler {
@@ -31,6 +31,9 @@
 
 #editorHeader {
     position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     width: 100vw;
     height: 75px;
     background-color: var(--headerBg);
@@ -39,6 +42,7 @@
     display: flex;
     justify-content: space-between;
     z-index: 500;
+    overflow: hidden;
 }
 
 #wkInfoContainerWithButton {
