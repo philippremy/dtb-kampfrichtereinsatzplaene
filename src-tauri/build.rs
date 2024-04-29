@@ -15,11 +15,11 @@ fn main() {
     };
 
     // Get the Source Code file for the FFI libdocx
-    let ffi_library_source_file = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/FFI.cs");
-    let ffi_library_source_file1 = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/Types.cs");
-    let ffi_library_source_file2 = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/DocumentWriter.cs");
-    let ffi_library_source_file3 = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx.sln");
-    let ffi_library_source_file4 = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx/libkampfrichtereinsatzplaene_docx.csproj");
+    let ffi_library_source_file = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib").join("libkampfrichtereinsatzplaene_docx").join("libkampfrichtereinsatzplaene_docx").join("FFI.cs");
+    let ffi_library_source_file1 = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib").join("libkampfrichtereinsatzplaene_docx").join("libkampfrichtereinsatzplaene_docx").join("Types.cs");
+    let ffi_library_source_file2 = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib").join("libkampfrichtereinsatzplaene_docx").join("libkampfrichtereinsatzplaene_docx").join("DocumentWriter.cs");
+    let ffi_library_source_file3 = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib").join("libkampfrichtereinsatzplaene_docx").join("libkampfrichtereinsatzplaene_docx.sln");
+    let ffi_library_source_file4 = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib").join("libkampfrichtereinsatzplaene_docx").join("libkampfrichtereinsatzplaene_docx").join("libkampfrichtereinsatzplaene_docx.csproj");
 
     // Watch for changes in the FFI Source File
     println!("cargo::rerun-if-changed={}", ffi_library_source_file.display());
@@ -29,7 +29,7 @@ fn main() {
     println!("cargo::rerun-if-changed={}", ffi_library_source_file4.display());
 
     // Get the main folder of the FFI libdocx library
-    let ffi_library_main_dir = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib/libkampfrichtereinsatzplaene_docx");
+    let ffi_library_main_dir = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib").join("libkampfrichtereinsatzplaene_docx");
 
     // Get the needed runtime identifier
     let dotnet_rid = match std::env::var("CARGO_CFG_TARGET_OS") {
@@ -123,11 +123,11 @@ fn main() {
     // We got here, which means that "dotnet publish" exited correctly (exit code 0)
     // Next, check if we got a library where we expected it.
     #[cfg(target_os = "macos")]
-        let build_shared_library = ffi_library_main_dir.clone().join("build/libkampfrichtereinsatzplaene_docx.dylib");
+        let build_shared_library = ffi_library_main_dir.clone().join("build").join("libkampfrichtereinsatzplaene_docx.dylib");
     #[cfg(target_os = "windows")]
-        let build_shared_library = ffi_library_main_dir.clone().join("build/libkampfrichtereinsatzplaene_docx.dll");
+        let build_shared_library = ffi_library_main_dir.clone().join("build").join("libkampfrichtereinsatzplaene_docx.dll");
     #[cfg(target_os = "linux")]
-        let build_shared_library = ffi_library_main_dir.clone().join("build/libkampfrichtereinsatzplaene_docx.so");
+        let build_shared_library = ffi_library_main_dir.clone().join("build").join("libkampfrichtereinsatzplaene_docx.so");
     if !build_shared_library.exists() {
         println!("cargo::warning=The natively built library cannot be found at the following path: {}", build_shared_library.display());
         exit(-1);
@@ -138,7 +138,7 @@ fn main() {
     // WE NEED TO REMOVE THE "LIB" PART BECAUSE WINDOWS IS DUMB.
     #[cfg(target_os = "windows")]
     {
-        let win_static_library_candidates = match glob::glob(format!("{}/**/libkampfrichtereinsatzplaene_docx.dylib", ffi_library_main_dir.clone().join("libkampfrichtereinsatzplaene_docx").join("bin").to_str().unwrap()).as_str()) {
+        let win_static_library_candidates = match glob::glob(format!("{}/**/libkampfrichtereinsatzplaene_docx.lib", ffi_library_main_dir.clone().join("libkampfrichtereinsatzplaene_docx").join("bin").to_str().unwrap()).as_str()) {
             Ok(glob) => {glob}
             Err(err) => {
                 println!("cargo::warning=Glob threw an error while finding the windows static library file: {:?}", err);
