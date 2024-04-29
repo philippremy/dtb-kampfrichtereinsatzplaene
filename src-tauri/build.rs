@@ -147,7 +147,7 @@ fn main() {
         };
         for candidate in win_static_library_candidates {
             if candidate.is_ok() {
-                std::fs::copy(candidate.unwrap(), ffi_library_main_dir.clone().join("build/kampfrichtereinsatzplaene_docx.lib")).unwrap();
+                std::fs::copy(candidate.unwrap(), ffi_library_main_dir.clone().join("build").join("kampfrichtereinsatzplaene_docx.lib")).unwrap();
                 break;
             }
         }
@@ -159,7 +159,7 @@ fn main() {
 
     // We finally have everything. God bless us. Let's set the linker flags.
     let build_shared_library_dir = ffi_library_main_dir.clone().join("build");
-    println!("cargo:rustc-link-search=native={}", build_shared_library_dir.display());
+    println!("cargo:rustc-link-search=native={}", build_shared_library_dir.to_str().unwrap());
 
     // Build Tauri normally
     tauri_build::build();
