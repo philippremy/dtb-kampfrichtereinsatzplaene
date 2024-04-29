@@ -10,3 +10,4 @@ Implement a sanitizing algorithm which sanitizes all templates (i.e., makes sure
 - [ ] Implement a license window
 - [ ] Fix window titles
 - [ ] Implement feedback windows
+- [x] Fix the way how we find the path of the build library (use the glob crate instead) [Windows only!]
