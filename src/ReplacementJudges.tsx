@@ -103,9 +103,9 @@ export default class ReplacementJudges extends React.Component<{storage: Fronten
                                     {
                                         noOfReplacementJudges++;
                                         return(
-                                            <Field key={name + "-field"}>
-                                                <Input key={name + "-input"} aria-label={name} contentBefore={noOfReplacementJudges.toString() + "."} defaultValue={name} className="inputTypeReplacement" onInput={(element) => {this.reactToInputChange(element)}} contentAfter={
-                                                    <Button key={name + "-button"} aria-label={name} icon={<DeleteRegular />} appearance={"transparent"} size={"small"} onClick={(element) => {this.removeCurrent(element)}} />
+                                            <Field>
+                                                <Input aria-label={name} contentBefore={noOfReplacementJudges.toString() + "."} defaultValue={name} className="inputTypeReplacement" onInput={(element) => {this.reactToInputChange(element)}} contentAfter={
+                                                    <Button aria-label={name} icon={<DeleteRegular />} appearance={"transparent"} size={"small"} onClick={(element) => {this.removeCurrent(element)}} />
                                                 }></Input>
                                             </Field>
                                         )
