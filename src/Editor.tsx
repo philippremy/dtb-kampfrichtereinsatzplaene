@@ -1,20 +1,13 @@
 import { Button, Caption2, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, FluentProvider, Input, Link, Menu, MenuButton, MenuButtonProps, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, SplitButton, Subtitle2, Text, Toast, ToastBody, Toaster, ToastFooter, ToastIntent, ToastTitle, ToastTrigger, useToastController, webDarkTheme, webLightTheme } from "@fluentui/react-components";
-import {
-    AddFilled, CalendarFilled,
-    CheckmarkFilled,
-    DocumentFilled,
-    ErrorCircleFilled,
-    PenFilled, PersonFilled, PinFilled,
-    SaveFilled, TimePickerFilled,
-    TrophyFilled
-} from "@fluentui/react-icons";
+import { AddFilled, CalendarFilled, CheckmarkFilled, ChevronDownRegular, DocumentFilled, ErrorCircleFilled, PenFilled, PersonFilled, PinFilled, SaveFilled, TimePickerFilled, TrophyFilled } from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api";
-import React, {useEffect, useId, useState} from "react";
+import React, { useEffect, useId, useState } from "react";
 import "./Editor.css";
 import { v4 as uuidv4 } from 'uuid';
 import KampfgerichteRenderer from "./KampfgerichteRenderer";
 import { ask, save } from "@tauri-apps/api/dialog";
-import {getCurrent} from "@tauri-apps/api/window";
+import { getCurrent } from "@tauri-apps/api/window";
+import ReplacementJudges from "./ReplacementJudges.tsx";
 
 // Kampfrichter Interface
 export type Kampfrichter = {
@@ -122,6 +115,9 @@ function Editor() {
                     wk_responsible_person: backendStorage.wk_responsible_person
 
                 });
+            }
+            if(backendStorage.wk_replacement_judges !== undefined && backendStorage.wk_replacement_judges.length !== 0) {
+                setEditorExists(true);
             }
         });
     }, []);
@@ -311,7 +307,6 @@ function Editor() {
         });
 
         temp_storage.changedByDoubleHook = true;
-
         setFrontendStorage(Object.assign({}, temp_storage));
         let currentWindow = getCurrent();
         currentWindow.setTitle(frontendStorage.wk_name + " (nicht gespeichert)").then(() => {});
@@ -462,6 +457,9 @@ function Editor() {
         return dayStr + '.' + monthStr + '.' + yearStr;
     }
 
+    // Everything for the replacement judges
+    const [editorExists, setEditorExists] = useState(false);
+
     return (
         <FluentProvider theme={theme}>
             <div id="editorHeader">
@@ -502,11 +500,12 @@ function Editor() {
             </div>
             <div id="mainContents">
                 <KampfgerichteRenderer storage={frontendStorage} setStorage={setFrontendStorage} />
+                <ReplacementJudges hidden={!editorExists} storage={frontendStorage} setStorage={setFrontendStorage} setHidden={setEditorExists} />
                 <div className="filler" />
             </div>
             <Menu>
                 <MenuTrigger disableButtonEnhancement>
-                    <MenuButton appearance="primary" icon={<AddFilled></AddFilled>} id="addButton"></MenuButton>
+                    <MenuButton appearance="primary" icon={<AddFilled />} menuIcon={<ChevronDownRegular />} id="addButton"></MenuButton>
                 </MenuTrigger>
                 <MenuPopover>
                     <MenuList>
@@ -514,6 +513,7 @@ function Editor() {
                         <MenuItem onClick={() => {setKindToCreate("Geradeturnen auf Musik"); setOpen(true)}}>Geradeturnen auf Musik</MenuItem>
                         <MenuItem onClick={() => {setKindToCreate("Spiraleturnen"); setOpen(true)}}>Spiraleturnen</MenuItem>
                         <MenuItem onClick={() => {setKindToCreate("Sprung"); setOpen(true)}}>Sprung</MenuItem>
+                        <MenuItem onClick={() => {setEditorExists(true)}} disabled={editorExists}>Ersatzkampfrichter</MenuItem>
                         { /* <MenuItem onClick={() => {setKindToCreate("Leer"); setOpen(true)}}>Leer</MenuItem> */ }
                     </MenuList>
                 </MenuPopover>

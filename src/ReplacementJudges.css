@@ -1,0 +1,38 @@
+#headContainer {
+    margin-top: 10px;
+}
+
+.cardType {
+    max-width: 250px;
+    min-width: 250px;
+    height: 570px;
+}
+
+.tableInfoContainer {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.cardHeaderDiv {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.fieldContainerReplacementJudges {
+    margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 10px;
+    max-width: 90%;
+    min-width: 90%;
+}
+
+.inputTypeReplacement {
+    max-width: 225px;
+    min-width: 225px;
+    padding-right: 5px;
+}

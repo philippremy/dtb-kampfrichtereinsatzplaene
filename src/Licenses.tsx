@@ -1,22 +1,8 @@
 import { useEffect, useState } from "react";
 import { open } from '@tauri-apps/api/shell';
 import "./Licenses.css";
-import {
-    FluentProvider,
-    webLightTheme,
-    webDarkTheme,
-    Accordion,
-    AccordionItem,
-    AccordionHeader, Button, Divider, AccordionPanel, Card, Title3
-} from "@fluentui/react-components";
-import {
-    CalendarDateRegular,
-    CodeFilled, FluentRegular,
-    FolderListRegular, FolderSearchRegular, IconsRegular, NumberSymbolRegular,
-    SettingsCogMultipleRegular, StoreMicrosoftRegular,
-    TextAlignJustifyRegular, TextWholeWordRegular,
-    WindowMultipleFilled
-} from "@fluentui/react-icons";
+import { FluentProvider, webLightTheme, webDarkTheme, Accordion, AccordionItem, AccordionHeader, Button, Divider, AccordionPanel, Card, Title3 } from "@fluentui/react-components";
+import { CalendarDateRegular, CodeFilled, FluentRegular, FolderListRegular, FolderSearchRegular, IconsRegular, NumberSymbolRegular, SettingsCogMultipleRegular, StoreMicrosoftRegular, TextAlignJustifyRegular, TextWholeWordRegular, WindowMultipleFilled } from "@fluentui/react-icons";
 import { FaGithub, FaFontAwesomeAlt } from "react-icons/fa";
 
 export default function Licenses() {
