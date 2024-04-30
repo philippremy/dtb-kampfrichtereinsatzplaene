@@ -246,9 +246,68 @@ public partial class DocumentWriter
                         cellList.Add(cell);
                 }
             }
-
             var q = from c in cellList where c.InnerText == "### Altersklassen ###" select c.Parent;
             q.First().Remove();
+            if (document.CanSave)
+            {
+                document.Save();
+            }
+        }
+    }
+
+    private void SetReplacementJudges()
+    {
+        using (WordprocessingDocument document = WordprocessingDocument.Open(this.savePath, true))
+        {
+            // First, get the relevant table
+            if (document.MainDocumentPart is null)
+            {
+                throw new ArgumentNullException("MainDocumentPart of template file is null.");
+            }
+            if (document.MainDocumentPart.Document.Body is null)
+            {
+                throw new ArgumentNullException("Body of template file is null.");
+            }
+            var tables = document.MainDocumentPart.Document.Descendants<Table>().ToList();
+            List<TableCell> cellList = new List<TableCell>();
+            foreach (Table t in tables)
+            {
+                var rows = t.Elements<TableRow>();
+                foreach (TableRow row in rows)
+                {
+                    var cells = row.Elements<TableCell>();
+                    foreach (TableCell cell in cells) 
+                        cellList.Add(cell);
+                }
+            }
+            // If there are no replacement judges, remove the whole table
+            if (this.wkReplacementJudges == null || this.wkReplacementJudges.Length == 0)
+            {
+                var q = from c in cellList where c.InnerText == "### Altersklassen ###" select c.Parent.Parent;
+                q.First().Remove();
+                return;
+            }
+            // Else set the replacement judges accordingly
+            var w = from c in cellList where c.InnerText == "### Altersklassen ###" select c;
+            // Remove all run children
+            TableCell cellToChange = w.First();
+            cellToChange.Elements<Paragraph>().First().RemoveAllChildren<Run>();
+            // Now iterate through the replacement judges and create an element to append
+            Run elementToInsert = new Run();
+            Break? lastBreak = null;
+            var nameEnumerator = this.wkReplacementJudges.GetEnumerator();
+            while (nameEnumerator.MoveNext())
+            {
+                elementToInsert.AppendChild(new Text("-  " + nameEnumerator.Current));
+                lastBreak = elementToInsert.AppendChild(new Break(){ Type = BreakValues.TextWrapping });
+            }
+            // Remove the last line break!
+            lastBreak?.Remove();
+            // Save document, if possible
+            if (document.CanSave)
+            {
+                document.Save();
+            }
         }
     }
     
