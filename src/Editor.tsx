@@ -309,7 +309,9 @@ function Editor() {
         temp_storage.changedByDoubleHook = true;
         setFrontendStorage(Object.assign({}, temp_storage));
         let currentWindow = getCurrent();
-        currentWindow.setTitle(frontendStorage.wk_name + " (nicht gespeichert)").then(() => {});
+        if(temp_storage.wk_name !== "") {
+            currentWindow.setTitle(temp_storage.wk_name + " (nicht gespeichert)").then(() => {});
+        }
 
     }, [frontendStorage]);
 
