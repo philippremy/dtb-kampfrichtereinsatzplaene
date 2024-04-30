@@ -18,6 +18,7 @@ mod log;
 
 // Statics
 static VERSION: &str = env!("CARGO_PKG_VERSION");
+static mut SAVE_PATH: Option<String> = None;
 
 // MARK: Func: Update Storage Data
 /// Function to update the global storage from the frontend.
@@ -299,7 +300,7 @@ async fn sync_wk_data_and_open_editor(data: FrontendStorage, storage: State<'_, 
 }
 
 #[tauri::command]
-async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<FrontendStorage, ApplicationError> {
+async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<(FrontendStorage, Option<String>), ApplicationError> {
     let mut frontend_storage = FrontendStorage::default();
     match storage.wk_name.lock() {
         Ok(guard) => {
@@ -363,7 +364,7 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<Frontend
         Err(_err) => return Err(ApplicationError::MutexPoisonedError),
     }
 
-    return Ok(frontend_storage);
+    unsafe { return Ok((frontend_storage, SAVE_PATH.clone())) };
 }
 
 #[tauri::command]
@@ -590,6 +591,9 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, _filep
 // Then open the editor
 #[tauri::command]
 async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Storage>, app_handle: AppHandle) -> Result <ApplicationError, ()> {
+
+    // Set the static thing so we know where this was saved!
+    unsafe { SAVE_PATH = Some(filepath.clone()) };
 
     // Deserialize the file
     let imported_storage: Storage = match serde_json::from_reader(File::open(filepath).unwrap()) {

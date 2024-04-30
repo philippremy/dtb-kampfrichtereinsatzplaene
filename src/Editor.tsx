@@ -64,7 +64,16 @@ function Editor() {
     // Fetch initial data on mount
     useEffect(() => {
         invoke("get_wk_data_to_frontend").then((response) => {
-            const backendStorage = response as FrontendStorage;
+            console.log(response);
+            const responseCast = response as Array<any>;
+            const backendStorage = responseCast[0] as FrontendStorage;
+
+            // Set save path, if we have one (and nothing is provided yet!
+            if(responseCast[1] !== null) {
+                if(lastSavePath === undefined) {
+                    setLastSavePath(responseCast[1]);
+                }
+            }
 
             // We have to recreate the maps, because they cannot be deserialized into a Map from JSON
             // Neither can we cast them to a Map or create them from the Object Array.
