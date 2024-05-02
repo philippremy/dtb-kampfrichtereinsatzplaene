@@ -68,4 +68,5 @@ public enum ApplicationError {
     FailedToCreateStdErrFileError = 16,
     LibcDup2StdOutError = 17,
     LibcDup2StdErrError = 18,
+    CSharpPDFSavePathIsEmpty = 19,
 }

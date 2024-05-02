@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "libkampfrichtereinsatzplaene_docx", "libkampfrichtereinsatzplaene_docx\libkampfrichtereinsatzplaene_docx.csproj", "{001DE765-D73D-41CF-AF35-7407049D4F8A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clippit", "..\..\externals\Clippit\Clippit\Clippit.csproj", "{2F1A5887-7F62-4F86-B91C-5C85C81FD9E8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{001DE765-D73D-41CF-AF35-7407049D4F8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{001DE765-D73D-41CF-AF35-7407049D4F8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{001DE765-D73D-41CF-AF35-7407049D4F8A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F1A5887-7F62-4F86-B91C-5C85C81FD9E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F1A5887-7F62-4F86-B91C-5C85C81FD9E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F1A5887-7F62-4F86-B91C-5C85C81FD9E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F1A5887-7F62-4F86-B91C-5C85C81FD9E8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

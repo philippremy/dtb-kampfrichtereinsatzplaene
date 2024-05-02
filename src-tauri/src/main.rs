@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use tauri::{AppHandle, Manager, Menu, MenuItem, State, WindowBuilder};
-use crate::FFI::create_tables_docx;
+use crate::FFI::{create_tables_docx, create_tables_pdf};
 use crate::types::{ApplicationError, FrontendStorage, Storage};
 
 /// Declares the usage of crate-wide modules.
@@ -519,7 +519,7 @@ async fn sync_to_backend_and_create_docx(frontendstorage: FrontendStorage, filep
 }
 
 #[tauri::command]
-async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, _filepath: String, storage: State<'_, Storage>) -> Result<ApplicationError, ()> {
+async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepath: String, storage: State<'_, Storage>) -> Result<ApplicationError, ()> {
 
     match storage.wk_name.lock() {
         Ok(mut guard) => {
@@ -583,7 +583,7 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, _filep
         Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
     }
 
-    return Ok(ApplicationError::NoError);
+    return Ok(create_tables_pdf(storage.inner(), PathBuf::from(filepath)).unwrap());
 
 }
 
@@ -742,6 +742,7 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
 fn main() {
 
     // Rebase all StdOut and StdErr happenings
+    #[cfg(not(debug_assertions))]
     match log::activateLogging() {
         Ok(()) => {}
         Err(err) => {
