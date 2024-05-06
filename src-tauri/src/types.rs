@@ -63,4 +63,13 @@ pub enum ApplicationError {
     LibcDup2StdOutError = 17,
     LibcDup2StdErrError = 18,
     CSharpPDFSavePathIsEmpty = 19,
+    ChromeDownloadError = 20,
+    ChromiumBinaryIsUnexpectedlyNone = 21,
+    BrowserCouldNotBeBuild = 22,
+    NewTabCouldNotBeCreated = 23,
+    NavigationToGeneratedHTMLFileFailed = 24,
+    WaitingForNavigationFailed = 25,
+    PDFGenerationInChromiumFailed = 26,
+    WritingPDFDataToDiskFailed = 27,
+    RemovalOfTemporaryGeneratedFilesFailed = 28,
 }

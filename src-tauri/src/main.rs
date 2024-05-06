@@ -7,7 +7,10 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
+use headless_chrome::{Browser, LaunchOptions};
+use headless_chrome::types::{PrintToPdfOptions};
 use tauri::{AppHandle, Manager, Menu, MenuItem, State, WindowBuilder};
+use crate::ChromeFetcher::{Fetcher, FetcherOptions, Revision};
 use crate::FFI::{create_tables_docx, create_tables_pdf};
 use crate::types::{ApplicationError, FrontendStorage, Storage};
 
@@ -15,10 +18,12 @@ use crate::types::{ApplicationError, FrontendStorage, Storage};
 mod types;
 mod FFI;
 mod log;
+mod ChromeFetcher;
 
 // Statics
 static VERSION: &str = env!("CARGO_PKG_VERSION");
 static mut SAVE_PATH: Option<String> = None;
+static mut CHROME_BIN: Option<PathBuf> = None;
 
 // MARK: Func: Update Storage Data
 /// Function to update the global storage from the frontend.
@@ -583,8 +588,83 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
         Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
     }
 
-    return Ok(create_tables_pdf(storage.inner(), PathBuf::from(filepath)).unwrap());
+    // Process backend library docx and html
+    let library_code = create_tables_pdf(storage.inner(), PathBuf::from(filepath.clone())).unwrap();
 
+    // Check if this succeeded.
+    if library_code != ApplicationError::NoError {
+        return Ok(library_code);
+    }
+
+    // SAFETY: This will only be fetched from different window instances, no race conditions
+    // are to be expected. No human is that fast.
+    let chromium_binary = unsafe { CHROME_BIN.clone() };
+
+    // If this is none, that is a very bad sign. Maybe a race condition nobody saw in advance :(?
+    if chromium_binary.is_none() {
+        return Ok(ApplicationError::ChromiumBinaryIsUnexpectedlyNone);
+    }
+
+    // Now use our local chromium install to generate the pdf
+    let browser = match Browser::new(LaunchOptions::default_builder().headless(true).enable_logging(true).path(chromium_binary).build().unwrap()) {
+        Ok(browser) => { browser },
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::BrowserCouldNotBeBuild) }
+    };
+    let tab = match browser.new_tab() {
+        Ok(tab) => { tab },
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::NewTabCouldNotBeCreated) }
+    };
+
+    // Fetch the generated html file
+    let generated_html = filepath.clone().replace(".pdf", "_temp.html");
+    let generated_docx = filepath.clone().replace(".pdf", "_temp.docx");
+
+    // Navigate to it
+    let mut generated_html_tab = match tab.navigate_to(&format!["file://{}", generated_html.as_str()]) {
+        Ok(tab) => { tab },
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::NavigationToGeneratedHTMLFileFailed) }
+    };
+
+    // Wait for navigation to finish
+    generated_html_tab = match generated_html_tab.wait_until_navigated() {
+        Ok(tab) => { tab },
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::WaitingForNavigationFailed) }
+    };
+
+    // Print to pdf and get the binary data
+    let mut pdf_options = PrintToPdfOptions::default();
+    pdf_options.paper_height = Some(11.7);
+    pdf_options.paper_width = Some(8.3);
+    pdf_options.display_header_footer = Some(false);
+    pdf_options.margin_bottom = Some(0.0);
+    pdf_options.margin_left = Some(0.0);
+    pdf_options.margin_right = Some(0.0);
+    pdf_options.margin_top = Some(0.0);
+    pdf_options.scale = Some(1.0);
+    let pdf_data = match generated_html_tab.print_to_pdf(Some(pdf_options)) {
+        Ok(data) => { data },
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::PDFGenerationInChromiumFailed) }
+    };
+
+    // Write the pdf contents to file!
+    match std::fs::write(filepath.clone(), pdf_data) {
+        Ok(()) => {},
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::WritingPDFDataToDiskFailed) }
+    }
+
+    // Delete temporary files
+    match std::fs::remove_file(generated_html) {
+        Ok(()) => {},
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed) }
+    }
+
+    // Delete temporary files
+    match std::fs::remove_file(generated_docx) {
+        Ok(()) => {},
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed) }
+    }
+
+    return Ok(ApplicationError::NoError);
 }
 
 // Function for loading a file from disk and importing this into frontend storage
@@ -737,6 +817,51 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
     return Ok(ApplicationError::NoError);
 }
 
+// Function for checking if we have a chrome binary installed on the system
+#[tauri::command]
+fn check_for_chrome_binary() -> bool {
+
+    match directories::BaseDirs::new() {
+        None => { panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.") }
+        Some(dirs) => {
+            let appdata_roaming_dir = dirs.data_dir();
+            let application_externals_dir = appdata_roaming_dir.join("de.philippremy.dtb-kampfrichtereinsatzplaene").join("Externals");
+            let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(false).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Latest);
+            let fetcher = Fetcher::new(fetcher_options);
+            let fetched_instance = match fetcher.fetch() {
+                Ok(path) => { path },
+                Err(_err) => { return false }
+            };
+            // SAFETY: This will only be fetched from different window instances, no race conditions
+            // are to be expected. No human is that fast.
+            unsafe { CHROME_BIN = Some(fetched_instance.clone()) };
+        }
+    }
+
+    return true;
+}
+
+#[tauri::command]
+async fn download_chrome() -> Result<ApplicationError, ()> {
+    match directories::BaseDirs::new() {
+        None => { panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.") }
+        Some(dirs) => {
+            let appdata_roaming_dir = dirs.data_dir();
+            let application_externals_dir = appdata_roaming_dir.join("de.philippremy.dtb-kampfrichtereinsatzplaene").join("Externals");
+            let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(true).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Latest);
+            let fetcher = Fetcher::new(fetcher_options);
+            let fetched_instance = match fetcher.fetch() {
+                Ok(path) => { path },
+                Err(_err) => { return Ok(ApplicationError::ChromeDownloadError) }
+            };
+            // SAFETY: This will only be fetched from different window instances, no race conditions
+            // are to be expected. No human is that fast.
+            unsafe { CHROME_BIN = Some(fetched_instance.clone()) };
+        }
+    }
+    return Ok(ApplicationError::NoError);
+}
+
 // MARK: Main Function
 /// Main application entry function.
 fn main() {
@@ -843,7 +968,7 @@ fn main() {
     tauri::Builder::default()
         .menu(window_menu.clone())
         .manage(Storage::default())
-        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor])
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome])
         .setup(|_app| {
             Ok(())
         })
