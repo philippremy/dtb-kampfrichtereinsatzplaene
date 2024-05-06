@@ -6,7 +6,7 @@ Implement a sanitizing algorithm which sanitizes all templates (i.e., makes sure
 - [x] Implement setting replacement judges in the frontend
 - [x] Implement writing replacement judges to the backend
 - [x] Implement writing a PDF (from the generated docx)
-- [ ] Implement disabling the PDF button when there is no chromium path at the frontend
+- [x] Implement disabling the PDF button when there is no chromium path at the frontend
 - [ ] Implement a more robust failure system with better feedback messages
 - [x] Implement a license window
 - [x] Fix window titles
