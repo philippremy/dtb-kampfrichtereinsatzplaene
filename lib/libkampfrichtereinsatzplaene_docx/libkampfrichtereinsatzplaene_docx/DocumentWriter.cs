@@ -32,6 +32,9 @@ public partial class DocumentWriter
     
     [GeneratedRegex(@"### Kampfrichterverantwortlicher ###")]
     private static partial Regex WkResponsiblePersonRegex();
+    
+    [GeneratedRegex(@"### Ersatzkampfrichter ###")]
+    private static partial Regex WkReplacementJudgesRegex();
 
     public DocumentWriter(Storage marshalledStorage, string savePath)
     {
@@ -207,6 +210,27 @@ public partial class DocumentWriter
             documentText = WkPlaceRegex().Replace(documentText, this.wkPlace ?? "N/A");
             documentText = WkJudgesmeetingTimeRegex().Replace(documentText, this.wkJudgesMeetingTime ?? "N/A");
             documentText = WkResponsiblePersonRegex().Replace(documentText, this.wkResponsiblePerson ?? "N/A");
+            
+            // Create the string for the replacement judges
+            string replacementJudgesString = "";
+            if (this.wkReplacementJudges is not null && this.wkReplacementJudges.Length != 0)
+            {
+                for (int i = 0; i < this.wkReplacementJudges.Length; i++)
+                {
+                    if (i == this.wkReplacementJudges.Length - 1)
+                    {
+                        replacementJudgesString += this.wkReplacementJudges[i];
+                    } else
+                    {
+                        replacementJudgesString += this.wkReplacementJudges[i] + ", ";
+                    }
+                }
+            } else
+            {
+                replacementJudgesString = "Keine";
+            }
+
+            documentText = WkReplacementJudgesRegex().Replace(documentText, replacementJudgesString);
 
             using (StreamWriter streamWriter = new StreamWriter(document.MainDocumentPart.GetStream(FileMode.Create)))
             {
@@ -246,9 +270,12 @@ public partial class DocumentWriter
                         cellList.Add(cell);
                 }
             }
-
             var q = from c in cellList where c.InnerText == "### Altersklassen ###" select c.Parent;
             q.First().Remove();
+            if (document.CanSave)
+            {
+                document.Save();
+            }
         }
     }
     

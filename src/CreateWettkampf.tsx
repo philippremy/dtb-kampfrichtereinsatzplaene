@@ -1,26 +1,12 @@
-import React, {useEffect, useId, useState} from "react";
-import {
-  Button,
-  Field,
-  FluentProvider,
-  Image,
-  Input,
-  Subtitle2,
-  Toast,
-  ToastBody,
-  Toaster,
-  ToastTitle,
-  useToastController,
-  webDarkTheme,
-  webLightTheme
-} from "@fluentui/react-components";
+import React, { useEffect, useId, useState } from "react";
+import { Button, Field, FluentProvider, Image, Input, Subtitle2, Toast, ToastBody, Toaster, ToastTitle, useToastController, webDarkTheme, webLightTheme } from "@fluentui/react-components";
 import "./CreateWettkampf.css";
 // @ts-ignore
 import dtbLogo from "./assets/dtb-logo.svg";
-import {CalendarFilled, PersonFilled, PinFilled, TimePickerFilled, TrophyFilled} from "@fluentui/react-icons";
-import {invoke} from "@tauri-apps/api";
-import {getCurrent} from "@tauri-apps/api/window";
-import {FrontendStorage} from "./Editor.tsx";
+import { CalendarFilled, PersonFilled, PinFilled, TimePickerFilled, TrophyFilled } from "@fluentui/react-icons";
+import { invoke } from "@tauri-apps/api";
+import { getCurrent } from "@tauri-apps/api/window";
+import { FrontendStorage } from "./Editor.tsx";
 
 function CreateWettkampf() {
 

@@ -64,4 +64,62 @@ public class FFI
         return writer.Write();
 
     }
+    
+    private static ApplicationError CreateFromRawDataInternal(IntPtr json_data, string save_path)
+    {
+        Storage? storage;
+        string? savePath = save_path;
+        
+        try
+        {
+            string? rawJSONData = Marshal.PtrToStringUTF8(json_data);
+            if (rawJSONData == null) return ApplicationError.MarshalJSONNullError;
+            storage = JsonSerializer.Deserialize<Storage>(rawJSONData, SourceGenerationContextStorage.Default.Storage);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return e switch
+            {
+                ArgumentNullException => ApplicationError.DeserializeArgumentNullError,
+                JsonException => ApplicationError.DeserializeJSONError,
+                NotSupportedException => ApplicationError.DeserializeNotSupportedError,
+                _ => ApplicationError.UnknownError
+            };
+        }
+
+        if (storage == null) return ApplicationError.StorageNullError;
+
+        DocumentWriter writer = new DocumentWriter(storage, savePath);
+        
+        return writer.Write();
+
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "ffi_create_pdf_from_raw_data")]
+    public static ApplicationError CreatePDFFromRawData(IntPtr json_data, IntPtr save_path)
+    {
+        string? savePath;
+
+        try
+        {
+            savePath = Marshal.PtrToStringUTF8(save_path);
+            FileInfo savePathInfo = new FileInfo(savePath);
+            string docxSavePath = savePathInfo.FullName.Replace(".pdf", "_temp.docx");
+            if (savePath is null) return ApplicationError.MarshalSavePathNullError;
+            ApplicationError docxGeneratedCode = CreateFromRawDataInternal(json_data, docxSavePath);
+            if (docxGeneratedCode != ApplicationError.NoError)
+            {
+                return docxGeneratedCode;
+            }
+            PDFWriter pdfWriter = new PDFWriter(savePath, docxSavePath);
+            return pdfWriter.WriteToPDF();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return ApplicationError.CSharpWriteError;
+        }
+        
+    }
 }

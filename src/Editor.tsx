@@ -1,20 +1,13 @@
-import { Button, Caption2, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, FluentProvider, Input, Link, Menu, MenuButton, MenuButtonProps, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, SplitButton, Subtitle2, Text, Toast, ToastBody, Toaster, ToastFooter, ToastIntent, ToastTitle, ToastTrigger, useToastController, webDarkTheme, webLightTheme } from "@fluentui/react-components";
-import {
-    AddFilled, CalendarFilled,
-    CheckmarkFilled,
-    DocumentFilled,
-    ErrorCircleFilled,
-    PenFilled, PersonFilled, PinFilled,
-    SaveFilled, TimePickerFilled,
-    TrophyFilled
-} from "@fluentui/react-icons";
+import { Button, Caption2, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, FluentProvider, Input, Link, Menu, MenuButton, MenuButtonProps, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, SplitButton, Subtitle2, Text, Toast, ToastBody, Toaster, ToastFooter, ToastIntent, ToastTitle, ToastTrigger, useToastController, webDarkTheme, webLightTheme, Tooltip } from "@fluentui/react-components";
+import { AddFilled, CalendarFilled, CheckmarkFilled, ChevronDownRegular, DocumentFilled, ErrorCircleFilled, PenFilled, PersonFilled, PinFilled, SaveFilled, TimePickerFilled, TrophyFilled } from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api";
-import React, {useEffect, useId, useState} from "react";
+import React, { useEffect, useId, useState } from "react";
 import "./Editor.css";
 import { v4 as uuidv4 } from 'uuid';
 import KampfgerichteRenderer from "./KampfgerichteRenderer";
 import { ask, save } from "@tauri-apps/api/dialog";
-import {getCurrent} from "@tauri-apps/api/window";
+import { getCurrent } from "@tauri-apps/api/window";
+import ReplacementJudges from "./ReplacementJudges.tsx";
 
 // Kampfrichter Interface
 export type Kampfrichter = {
@@ -46,6 +39,26 @@ export type FrontendStorage = {
 
 function Editor() {
 
+    // Function to show a file in finder
+    async function showInFolder(path: string) {
+        await invoke('show_item_in_folder', {path});
+    }
+
+    // State for checking if PDF printing is available
+    const [pdfIsDisabled, setPdfIsDisabled] = useState(true);
+
+    // Effect for checking if PDF printing is available
+    useEffect(() => {
+        invoke("check_if_pdf_is_available", {}).then((response) => {
+            let responseCast = response as boolean;
+            if(responseCast) {
+                setPdfIsDisabled(false);
+            } else {
+                setPdfIsDisabled(true);
+            }
+        });
+    }, []);
+
     // Theme Hook
     const useThemeDetector = () => {
         const [theme, setTheme] = useState(webLightTheme);
@@ -71,7 +84,16 @@ function Editor() {
     // Fetch initial data on mount
     useEffect(() => {
         invoke("get_wk_data_to_frontend").then((response) => {
-            const backendStorage = response as FrontendStorage;
+
+            const responseCast = response as Array<any>;
+            const backendStorage = responseCast[0] as FrontendStorage;
+
+            // Set save path, if we have one (and nothing is provided yet!
+            if(responseCast[1] !== null) {
+                if(lastSavePath === undefined) {
+                    setLastSavePath(responseCast[1]);
+                }
+            }
 
             // We have to recreate the maps, because they cannot be deserialized into a Map from JSON
             // Neither can we cast them to a Map or create them from the Object Array.
@@ -123,6 +145,9 @@ function Editor() {
 
                 });
             }
+            if(backendStorage.wk_replacement_judges !== undefined && backendStorage.wk_replacement_judges.length !== 0) {
+                setEditorExists(true);
+            }
         });
     }, []);
 
@@ -165,7 +190,7 @@ function Editor() {
             if(response !== "NoError") {
                 updateToastWithID("saveToast", "error", "Fehler", "Ein Fehler ist aufgetreten: " +  response, <ErrorCircleFilled />, 3000);
             } else {
-                updateToastWithID("saveToast", "success", "Speichern erfolgreich", "Der Wettkampf wurde gespeichert.", <CheckmarkFilled />, 3000);
+                updateToastWithID("saveToast", "success", "Speichern erfolgreich", "Der Wettkampf wurde gespeichert.", <CheckmarkFilled />, 3000, <Link onClick={() => {showInFolder(path)}}>Im Explorer anzeigen</Link>);
                 setLastSavePath(path);
                 let currentWindow = getCurrent();
                 currentWindow.setTitle(frontendStorage.wk_name + " (gespeichert)").then(() => {});
@@ -311,10 +336,11 @@ function Editor() {
         });
 
         temp_storage.changedByDoubleHook = true;
-
         setFrontendStorage(Object.assign({}, temp_storage));
         let currentWindow = getCurrent();
-        currentWindow.setTitle(frontendStorage.wk_name + " (nicht gespeichert)").then(() => {});
+        if(temp_storage.wk_name !== "") {
+            currentWindow.setTitle(temp_storage.wk_name + " (nicht gespeichert)").then(() => {});
+        }
 
     }, [frontendStorage]);
 
@@ -343,26 +369,49 @@ function Editor() {
         );
     }
 
-    function updateToastWithID(id: string, intent: ToastIntent, title: string, message: string, icon: JSX.Element, timeout: number) {
-        updateToast({
-            toastId: id,
-            intent: intent,
-            content: 
-                <Toast>
-                    <ToastTitle title={title} media={icon} />
-                    <ToastBody>
-                        <div className="toasterBody">
-                            <Text>{message}</Text>
-                        </div>
-                    </ToastBody>
-                    <ToastFooter>
-                        <ToastTrigger>
-                            <Link>Ausblenden</Link>
-                        </ToastTrigger>
-                    </ToastFooter>
-                </Toast>,
-            timeout: timeout,
-        });
+    function updateToastWithID(id: string, intent: ToastIntent, title: string, message: string, icon: JSX.Element, timeout: number, additionalLink?: JSX.Element) {
+        if(additionalLink !== undefined) {
+            updateToast({
+                toastId: id,
+                intent: intent,
+                content:
+                    <Toast>
+                        <ToastTitle title={title} media={icon} />
+                        <ToastBody>
+                            <div className="toasterBody">
+                                <Text>{message}</Text>
+                            </div>
+                        </ToastBody>
+                        <ToastFooter>
+                            <ToastTrigger>
+                                <Link>Ausblenden</Link>
+                            </ToastTrigger>
+                            {additionalLink}
+                        </ToastFooter>
+                    </Toast>,
+                timeout: timeout,
+            });
+        } else {
+            updateToast({
+                toastId: id,
+                intent: intent,
+                content:
+                    <Toast>
+                        <ToastTitle title={title} media={icon} />
+                        <ToastBody>
+                            <div className="toasterBody">
+                                <Text>{message}</Text>
+                            </div>
+                        </ToastBody>
+                        <ToastFooter>
+                            <ToastTrigger>
+                                <Link>Ausblenden</Link>
+                            </ToastTrigger>
+                        </ToastFooter>
+                    </Toast>,
+                timeout: timeout,
+            });
+        }
     }
 
     // Function to create plans as docx/pdf
@@ -397,7 +446,7 @@ function Editor() {
                 if(response !== "NoError") {
                     updateToastWithID("createToast", "error", "Fehler", "Ein Fehler ist aufgetreten: " +  response, <ErrorCircleFilled />, 3000);
                 } else {
-                    updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000);
+                    updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000, <Link onClick={() => {showInFolder(path)}}>Im Explorer anzeigen</Link>);
                 }
             });
         } else if(type === "pdf") {
@@ -405,7 +454,7 @@ function Editor() {
                 if(response !== "NoError") {
                     updateToastWithID("createToast", "error", "Fehler", "Ein Fehler ist aufgetreten: " +  response, <ErrorCircleFilled />, 3000);
                 } else {
-                    updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000);
+                    updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000, <Link onClick={() => {showInFolder(path)}}>Im Explorer anzeigen</Link>);
                 }
             });
         }
@@ -462,6 +511,12 @@ function Editor() {
         return dayStr + '.' + monthStr + '.' + yearStr;
     }
 
+    // Everything for the replacement judges
+    const [editorExists, setEditorExists] = useState(false);
+
+    // State for keeping track if the hintPopup is visible
+    const [hintVisible, setHintVisible] = useState(false);
+
     return (
         <FluentProvider theme={theme}>
             <div id="editorHeader">
@@ -494,7 +549,9 @@ function Editor() {
                         <MenuPopover>
                             <MenuList>
                                 <MenuItem onClick={() => createPlans("docx")}>Als Word-Datei</MenuItem>
-                                <MenuItem onClick={() => createPlans("pdf")}>Als PDF</MenuItem>
+                                <Tooltip content={"Chromium ist nicht installiert. Die Funktion ist deaktiviert."} relationship={"description"} positioning={"before"} withArrow={true} visible={pdfIsDisabled && hintVisible} onVisibleChange={(_ev, data) => setHintVisible(data.visible)} >
+                                    <MenuItem onClick={() => createPlans("pdf")} disabled={pdfIsDisabled}>Als PDF</MenuItem>
+                                </Tooltip>
                             </MenuList>
                         </MenuPopover>
                     </Menu>
@@ -502,11 +559,12 @@ function Editor() {
             </div>
             <div id="mainContents">
                 <KampfgerichteRenderer storage={frontendStorage} setStorage={setFrontendStorage} />
+                <ReplacementJudges hidden={!editorExists} storage={frontendStorage} setStorage={setFrontendStorage} setHidden={setEditorExists} />
                 <div className="filler" />
             </div>
             <Menu>
                 <MenuTrigger disableButtonEnhancement>
-                    <MenuButton appearance="primary" icon={<AddFilled></AddFilled>} id="addButton"></MenuButton>
+                    <MenuButton appearance="primary" icon={<AddFilled />} menuIcon={<ChevronDownRegular />} id="addButton"></MenuButton>
                 </MenuTrigger>
                 <MenuPopover>
                     <MenuList>
@@ -514,6 +572,7 @@ function Editor() {
                         <MenuItem onClick={() => {setKindToCreate("Geradeturnen auf Musik"); setOpen(true)}}>Geradeturnen auf Musik</MenuItem>
                         <MenuItem onClick={() => {setKindToCreate("Spiraleturnen"); setOpen(true)}}>Spiraleturnen</MenuItem>
                         <MenuItem onClick={() => {setKindToCreate("Sprung"); setOpen(true)}}>Sprung</MenuItem>
+                        <MenuItem onClick={() => {setEditorExists(true)}} disabled={editorExists}>Ersatzkampfrichter</MenuItem>
                         { /* <MenuItem onClick={() => {setKindToCreate("Leer"); setOpen(true)}}>Leer</MenuItem> */ }
                     </MenuList>
                 </MenuPopover>

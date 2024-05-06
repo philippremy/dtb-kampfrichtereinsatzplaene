@@ -7,17 +7,32 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
-use tauri::{AppHandle, Menu, MenuItem, State};
-use crate::FFI::create_tables_docx;
+use std::process::Command;
+use headless_chrome::{Browser, LaunchOptions};
+use headless_chrome::types::{PrintToPdfOptions};
+use tauri::{AppHandle, Manager, Menu, MenuItem, State, WindowBuilder};
+use crate::ChromeFetcher::{Fetcher, FetcherOptions, Revision};
+use crate::FFI::{create_tables_docx, create_tables_pdf};
 use crate::types::{ApplicationError, FrontendStorage, Storage};
+#[cfg(target_os = "linux")]
+use std::time::Duration;
+#[cfg(target_os = "linux")]
+use std::sync::Mutex;
 
 /// Declares the usage of crate-wide modules.
 mod types;
 mod FFI;
 mod log;
+mod ChromeFetcher;
+
+// Linux struct
+#[cfg(target_os = "linux")]
+pub struct DbusState(Mutex<Option<dbus::blocking::SyncConnection>>);
 
 // Statics
 static VERSION: &str = env!("CARGO_PKG_VERSION");
+static mut SAVE_PATH: Option<String> = None;
+static mut CHROME_BIN: Option<PathBuf> = None;
 
 // MARK: Func: Update Storage Data
 /// Function to update the global storage from the frontend.
@@ -299,7 +314,7 @@ async fn sync_wk_data_and_open_editor(data: FrontendStorage, storage: State<'_, 
 }
 
 #[tauri::command]
-async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<FrontendStorage, ApplicationError> {
+async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<(FrontendStorage, Option<String>), ApplicationError> {
     let mut frontend_storage = FrontendStorage::default();
     match storage.wk_name.lock() {
         Ok(guard) => {
@@ -363,7 +378,7 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<Frontend
         Err(_err) => return Err(ApplicationError::MutexPoisonedError),
     }
 
-    return Ok(frontend_storage);
+    unsafe { return Ok((frontend_storage, SAVE_PATH.clone())) };
 }
 
 #[tauri::command]
@@ -518,7 +533,7 @@ async fn sync_to_backend_and_create_docx(frontendstorage: FrontendStorage, filep
 }
 
 #[tauri::command]
-async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, _filepath: String, storage: State<'_, Storage>) -> Result<ApplicationError, ()> {
+async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepath: String, storage: State<'_, Storage>) -> Result<ApplicationError, ()> {
 
     match storage.wk_name.lock() {
         Ok(mut guard) => {
@@ -582,14 +597,92 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, _filep
         Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
     }
 
-    return Ok(ApplicationError::NoError);
+    // Process backend library docx and html
+    let library_code = create_tables_pdf(storage.inner(), PathBuf::from(filepath.clone())).unwrap();
 
+    // Check if this succeeded.
+    if library_code != ApplicationError::NoError {
+        return Ok(library_code);
+    }
+
+    // SAFETY: This will only be fetched from different window instances, no race conditions
+    // are to be expected. No human is that fast.
+    let chromium_binary = unsafe { CHROME_BIN.clone() };
+
+    // If this is none, that is a very bad sign. Maybe a race condition nobody saw in advance :(?
+    if chromium_binary.is_none() {
+        return Ok(ApplicationError::ChromiumBinaryIsUnexpectedlyNone);
+    }
+
+    // Now use our local chromium install to generate the pdf
+    let browser = match Browser::new(LaunchOptions::default_builder().headless(true).enable_logging(true).path(chromium_binary).build().unwrap()) {
+        Ok(browser) => { browser },
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::BrowserCouldNotBeBuild) }
+    };
+    let tab = match browser.new_tab() {
+        Ok(tab) => { tab },
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::NewTabCouldNotBeCreated) }
+    };
+
+    // Fetch the generated html file
+    let generated_html = filepath.clone().replace(".pdf", "_temp.html");
+    let generated_docx = filepath.clone().replace(".pdf", "_temp.docx");
+
+    // Navigate to it
+    let mut generated_html_tab = match tab.navigate_to(&format!["file://{}", generated_html.as_str()]) {
+        Ok(tab) => { tab },
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::NavigationToGeneratedHTMLFileFailed) }
+    };
+
+    // Wait for navigation to finish
+    generated_html_tab = match generated_html_tab.wait_until_navigated() {
+        Ok(tab) => { tab },
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::WaitingForNavigationFailed) }
+    };
+
+    // Print to pdf and get the binary data
+    let mut pdf_options = PrintToPdfOptions::default();
+    pdf_options.paper_height = Some(11.7);
+    pdf_options.paper_width = Some(8.3);
+    pdf_options.display_header_footer = Some(false);
+    pdf_options.margin_bottom = Some(0.0);
+    pdf_options.margin_left = Some(0.0);
+    pdf_options.margin_right = Some(0.0);
+    pdf_options.margin_top = Some(0.0);
+    pdf_options.scale = Some(1.0);
+    let pdf_data = match generated_html_tab.print_to_pdf(Some(pdf_options)) {
+        Ok(data) => { data },
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::PDFGenerationInChromiumFailed) }
+    };
+
+    // Write the pdf contents to file!
+    match std::fs::write(filepath.clone(), pdf_data) {
+        Ok(()) => {},
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::WritingPDFDataToDiskFailed) }
+    }
+
+    // Delete temporary files
+    match std::fs::remove_file(generated_html) {
+        Ok(()) => {},
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed) }
+    }
+
+    // Delete temporary files
+    match std::fs::remove_file(generated_docx) {
+        Ok(()) => {},
+        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed) }
+    }
+
+    return Ok(ApplicationError::NoError);
 }
 
 // Function for loading a file from disk and importing this into frontend storage
 // Then open the editor
 #[tauri::command]
 async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Storage>, app_handle: AppHandle) -> Result <ApplicationError, ()> {
+
+    // Set the static thing so we know where this was saved!
+    unsafe { SAVE_PATH = Some(filepath.clone()) };
 
     // Deserialize the file
     let imported_storage: Storage = match serde_json::from_reader(File::open(filepath).unwrap()) {
@@ -733,11 +826,135 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
     return Ok(ApplicationError::NoError);
 }
 
+// Function for checking if we have a chrome binary installed on the system
+#[tauri::command]
+fn check_for_chrome_binary() -> bool {
+
+    match directories::BaseDirs::new() {
+        None => { panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.") }
+        Some(dirs) => {
+            let appdata_roaming_dir = dirs.data_dir();
+            let application_externals_dir = appdata_roaming_dir.join("de.philippremy.dtb-kampfrichtereinsatzplaene").join("Externals");
+            let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(false).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Latest);
+            let fetcher = Fetcher::new(fetcher_options);
+            let fetched_instance = match fetcher.fetch() {
+                Ok(path) => { path },
+                Err(_err) => { return false }
+            };
+            // SAFETY: This will only be fetched from different window instances, no race conditions
+            // are to be expected. No human is that fast.
+            unsafe { CHROME_BIN = Some(fetched_instance.clone()) };
+        }
+    }
+
+    return true;
+}
+
+#[tauri::command]
+async fn download_chrome() -> Result<ApplicationError, ()> {
+    match directories::BaseDirs::new() {
+        None => { panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.") }
+        Some(dirs) => {
+            let appdata_roaming_dir = dirs.data_dir();
+            let application_externals_dir = appdata_roaming_dir.join("de.philippremy.dtb-kampfrichtereinsatzplaene").join("Externals");
+            let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(true).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Latest);
+            let fetcher = Fetcher::new(fetcher_options);
+            let fetched_instance = match fetcher.fetch() {
+                Ok(path) => { path },
+                Err(_err) => { return Ok(ApplicationError::ChromeDownloadError) }
+            };
+            // SAFETY: This will only be fetched from different window instances, no race conditions
+            // are to be expected. No human is that fast.
+            unsafe { CHROME_BIN = Some(fetched_instance.clone()) };
+        }
+    }
+    return Ok(ApplicationError::NoError);
+}
+
+#[tauri::command]
+fn check_if_pdf_is_available() -> bool {
+    unsafe {
+        if CHROME_BIN.is_none() {
+            return false;
+        } else {
+            return true;
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[tauri::command]
+fn show_item_in_folder(path: String, dbus_state: State<DbusState>) -> Result<(), String> {
+    let dbus_guard = dbus_state.0.lock().map_err(|e| e.to_string())?;
+
+    // see https://gitlab.freedesktop.org/dbus/dbus/-/issues/76
+    if dbus_guard.is_none() || path.contains(",") {
+        let mut path_buf = PathBuf::from(&path);
+        let new_path = match path_buf.is_dir() {
+            true => path,
+            false => {
+                path_buf.pop();
+                path_buf.into_os_string().into_string().unwrap()
+            }
+        };
+        Command::new("xdg-open")
+            .arg(&new_path)
+            .spawn()
+            .map_err(|e| format!("{e:?}"))?;
+    } else {
+        // https://docs.rs/dbus/latest/dbus/
+        let dbus = dbus_guard.as_ref().unwrap();
+        let proxy = dbus.with_proxy(
+            "org.freedesktop.FileManager1",
+            "/org/freedesktop/FileManager1",
+            Duration::from_secs(5),
+        );
+        let (_,): (bool,) = proxy
+            .method_call(
+                "org.freedesktop.FileManager1",
+                "ShowItems",
+                (vec![format!("file://{path}")], ""),
+            )
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+fn show_item_in_folder(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .args(["/select,", &path]) // The comma after select is not a typo
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let path_buf = PathBuf::from(&path);
+        if path_buf.is_dir() {
+            Command::new("open")
+                .args([&path])
+                .spawn()
+                .map_err(|e| e.to_string())?;
+        } else {
+            Command::new("open")
+                .args(["-R", &path])
+                .spawn()
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
 // MARK: Main Function
 /// Main application entry function.
 fn main() {
 
     // Rebase all StdOut and StdErr happenings
+    #[cfg(not(debug_assertions))]
     match log::activateLogging() {
         Ok(()) => {}
         Err(err) => {
@@ -835,12 +1052,80 @@ fn main() {
     window_menu = window_menu.add_submenu(file_submenu);
     window_menu = window_menu.add_submenu(other_submenu);
 
+    #[cfg(not(target_os = "linux"))]
     tauri::Builder::default()
-        .menu(window_menu)
+        .menu(window_menu.clone())
         .manage(Storage::default())
-        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor])
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder])
         .setup(|_app| {
             Ok(())
+        })
+        .on_menu_event(move |ev| {
+            // Get an AppHandle Clone
+            let app_handle = ev.window().app_handle().clone();
+            match ev.menu_item_id() {
+                "showLicenses" => {
+                    if app_handle.windows().contains_key("licenseWindow") {
+                        let windows = app_handle.windows();
+                        let license_window = windows.get("licenseWindow").unwrap();
+                        license_window.show().unwrap();
+                        license_window.set_focus().unwrap();
+                        return;
+                    }
+                    let license_window = WindowBuilder::new(&app_handle.clone(), "licenseWindow", tauri::WindowUrl::App(PathBuf::from("licenses.html")))
+                        .menu(window_menu.clone())
+                        .inner_size(550.0, 600.0)
+                        .title("Open Source Lizenzen".to_string())
+                        .center()
+                        .focused(true)
+                        .visible(true)
+                        .build()
+                        .unwrap();
+                    license_window.show().unwrap();
+                }
+                &_ => {}
+            }
+        })
+        .build(tauri::generate_context!())
+        .unwrap()
+        .run(|_app_handle, _ev| {
+
+        });
+
+    #[cfg(target_os = "linux")]
+    tauri::Builder::default()
+        .menu(window_menu.clone())
+        .manage(Storage::default())
+        .manage(DbusState(Mutex::new(dbus::blocking::SyncConnection::new_session().ok())))
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder])
+        .setup(|_app| {
+            Ok(())
+        })
+        .on_menu_event(move |ev| {
+            // Get an AppHandle Clone
+            let app_handle = ev.window().app_handle().clone();
+            match ev.menu_item_id() {
+                "showLicenses" => {
+                    if app_handle.windows().contains_key("licenseWindow") {
+                        let windows = app_handle.windows();
+                        let license_window = windows.get("licenseWindow").unwrap();
+                        license_window.show().unwrap();
+                        license_window.set_focus().unwrap();
+                        return;
+                    }
+                    let license_window = WindowBuilder::new(&app_handle.clone(), "licenseWindow", tauri::WindowUrl::App(PathBuf::from("licenses.html")))
+                        .menu(window_menu.clone())
+                        .inner_size(550.0, 600.0)
+                        .title("Open Source Lizenzen".to_string())
+                        .center()
+                        .focused(true)
+                        .visible(true)
+                        .build()
+                        .unwrap();
+                    license_window.show().unwrap();
+                }
+                &_ => {}
+            }
         })
         .build(tauri::generate_context!())
         .unwrap()
