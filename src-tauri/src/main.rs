@@ -835,7 +835,7 @@ fn check_for_chrome_binary() -> bool {
         Some(dirs) => {
             let appdata_roaming_dir = dirs.data_dir();
             let application_externals_dir = appdata_roaming_dir.join("de.philippremy.dtb-kampfrichtereinsatzplaene").join("Externals");
-            let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(false).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Latest);
+            let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(false).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1297006".to_string()));
             let fetcher = Fetcher::new(fetcher_options);
             let fetched_instance = match fetcher.fetch() {
                 Ok(path) => { path },
@@ -857,7 +857,7 @@ async fn download_chrome() -> Result<ApplicationError, ()> {
         Some(dirs) => {
             let appdata_roaming_dir = dirs.data_dir();
             let application_externals_dir = appdata_roaming_dir.join("de.philippremy.dtb-kampfrichtereinsatzplaene").join("Externals");
-            let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(true).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Latest);
+            let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(true).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1297006".to_string()));
             let fetcher = Fetcher::new(fetcher_options);
             let fetched_instance = match fetcher.fetch() {
                 Ok(path) => { path },
