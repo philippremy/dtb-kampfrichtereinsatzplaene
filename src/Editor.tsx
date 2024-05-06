@@ -1,4 +1,4 @@
-import { Button, Caption2, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, FluentProvider, Input, Link, Menu, MenuButton, MenuButtonProps, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, SplitButton, Subtitle2, Text, Toast, ToastBody, Toaster, ToastFooter, ToastIntent, ToastTitle, ToastTrigger, useToastController, webDarkTheme, webLightTheme } from "@fluentui/react-components";
+import { Button, Caption2, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, FluentProvider, Input, Link, Menu, MenuButton, MenuButtonProps, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, SplitButton, Subtitle2, Text, Toast, ToastBody, Toaster, ToastFooter, ToastIntent, ToastTitle, ToastTrigger, useToastController, webDarkTheme, webLightTheme, Tooltip } from "@fluentui/react-components";
 import { AddFilled, CalendarFilled, CheckmarkFilled, ChevronDownRegular, DocumentFilled, ErrorCircleFilled, PenFilled, PersonFilled, PinFilled, SaveFilled, TimePickerFilled, TrophyFilled } from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api";
 import React, { useEffect, useId, useState } from "react";
@@ -39,6 +39,21 @@ export type FrontendStorage = {
 
 function Editor() {
 
+    // State for checking if PDF printing is available
+    const [pdfIsDisabled, setPdfIsDisabled] = useState(true);
+
+    // Effect for checking if PDF printing is available
+    useEffect(() => {
+        invoke("check_if_pdf_is_available", {}).then((response) => {
+            let responseCast = response as boolean;
+            if(responseCast) {
+                setPdfIsDisabled(false);
+            } else {
+                setPdfIsDisabled(true);
+            }
+        });
+    }, []);
+
     // Theme Hook
     const useThemeDetector = () => {
         const [theme, setTheme] = useState(webLightTheme);
@@ -64,7 +79,7 @@ function Editor() {
     // Fetch initial data on mount
     useEffect(() => {
         invoke("get_wk_data_to_frontend").then((response) => {
-            console.log(response);
+
             const responseCast = response as Array<any>;
             const backendStorage = responseCast[0] as FrontendStorage;
 
@@ -471,6 +486,9 @@ function Editor() {
     // Everything for the replacement judges
     const [editorExists, setEditorExists] = useState(false);
 
+    // State for keeping track if the hintPopup is visible
+    const [hintVisible, setHintVisible] = useState(false);
+
     return (
         <FluentProvider theme={theme}>
             <div id="editorHeader">
@@ -503,7 +521,9 @@ function Editor() {
                         <MenuPopover>
                             <MenuList>
                                 <MenuItem onClick={() => createPlans("docx")}>Als Word-Datei</MenuItem>
-                                <MenuItem onClick={() => createPlans("pdf")}>Als PDF</MenuItem>
+                                <Tooltip content={"Chromium ist nicht installiert. Die Funktion ist deaktiviert."} relationship={"description"} positioning={"before"} withArrow={true} visible={pdfIsDisabled && hintVisible} onVisibleChange={(_ev, data) => setHintVisible(data.visible)} >
+                                    <MenuItem onClick={() => createPlans("pdf")} disabled={pdfIsDisabled}>Als PDF</MenuItem>
+                                </Tooltip>
                             </MenuList>
                         </MenuPopover>
                     </Menu>

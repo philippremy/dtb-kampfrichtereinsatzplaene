@@ -862,6 +862,17 @@ async fn download_chrome() -> Result<ApplicationError, ()> {
     return Ok(ApplicationError::NoError);
 }
 
+#[tauri::command]
+fn check_if_pdf_is_available() -> bool {
+    unsafe {
+        if CHROME_BIN.is_none() {
+            return false;
+        } else {
+            return true;
+        }
+    }
+}
+
 // MARK: Main Function
 /// Main application entry function.
 fn main() {
@@ -968,7 +979,7 @@ fn main() {
     tauri::Builder::default()
         .menu(window_menu.clone())
         .manage(Storage::default())
-        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome])
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available])
         .setup(|_app| {
             Ok(())
         })
