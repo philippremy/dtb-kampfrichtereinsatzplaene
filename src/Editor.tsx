@@ -39,6 +39,11 @@ export type FrontendStorage = {
 
 function Editor() {
 
+    // Function to show a file in finder
+    async function showInFolder(path: string) {
+        await invoke('show_item_in_folder', {path});
+    }
+
     // State for checking if PDF printing is available
     const [pdfIsDisabled, setPdfIsDisabled] = useState(true);
 
@@ -185,7 +190,7 @@ function Editor() {
             if(response !== "NoError") {
                 updateToastWithID("saveToast", "error", "Fehler", "Ein Fehler ist aufgetreten: " +  response, <ErrorCircleFilled />, 3000);
             } else {
-                updateToastWithID("saveToast", "success", "Speichern erfolgreich", "Der Wettkampf wurde gespeichert.", <CheckmarkFilled />, 3000);
+                updateToastWithID("saveToast", "success", "Speichern erfolgreich", "Der Wettkampf wurde gespeichert.", <CheckmarkFilled />, 3000, <Link onClick={() => {showInFolder(path)}}>Im Explorer anzeigen</Link>);
                 setLastSavePath(path);
                 let currentWindow = getCurrent();
                 currentWindow.setTitle(frontendStorage.wk_name + " (gespeichert)").then(() => {});
@@ -364,26 +369,49 @@ function Editor() {
         );
     }
 
-    function updateToastWithID(id: string, intent: ToastIntent, title: string, message: string, icon: JSX.Element, timeout: number) {
-        updateToast({
-            toastId: id,
-            intent: intent,
-            content: 
-                <Toast>
-                    <ToastTitle title={title} media={icon} />
-                    <ToastBody>
-                        <div className="toasterBody">
-                            <Text>{message}</Text>
-                        </div>
-                    </ToastBody>
-                    <ToastFooter>
-                        <ToastTrigger>
-                            <Link>Ausblenden</Link>
-                        </ToastTrigger>
-                    </ToastFooter>
-                </Toast>,
-            timeout: timeout,
-        });
+    function updateToastWithID(id: string, intent: ToastIntent, title: string, message: string, icon: JSX.Element, timeout: number, additionalLink?: JSX.Element) {
+        if(additionalLink !== undefined) {
+            updateToast({
+                toastId: id,
+                intent: intent,
+                content:
+                    <Toast>
+                        <ToastTitle title={title} media={icon} />
+                        <ToastBody>
+                            <div className="toasterBody">
+                                <Text>{message}</Text>
+                            </div>
+                        </ToastBody>
+                        <ToastFooter>
+                            <ToastTrigger>
+                                <Link>Ausblenden</Link>
+                            </ToastTrigger>
+                            {additionalLink}
+                        </ToastFooter>
+                    </Toast>,
+                timeout: timeout,
+            });
+        } else {
+            updateToast({
+                toastId: id,
+                intent: intent,
+                content:
+                    <Toast>
+                        <ToastTitle title={title} media={icon} />
+                        <ToastBody>
+                            <div className="toasterBody">
+                                <Text>{message}</Text>
+                            </div>
+                        </ToastBody>
+                        <ToastFooter>
+                            <ToastTrigger>
+                                <Link>Ausblenden</Link>
+                            </ToastTrigger>
+                        </ToastFooter>
+                    </Toast>,
+                timeout: timeout,
+            });
+        }
     }
 
     // Function to create plans as docx/pdf
@@ -418,7 +446,7 @@ function Editor() {
                 if(response !== "NoError") {
                     updateToastWithID("createToast", "error", "Fehler", "Ein Fehler ist aufgetreten: " +  response, <ErrorCircleFilled />, 3000);
                 } else {
-                    updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000);
+                    updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000, <Link onClick={() => {showInFolder(path)}}>Im Explorer anzeigen</Link>);
                 }
             });
         } else if(type === "pdf") {
@@ -426,7 +454,7 @@ function Editor() {
                 if(response !== "NoError") {
                     updateToastWithID("createToast", "error", "Fehler", "Ein Fehler ist aufgetreten: " +  response, <ErrorCircleFilled />, 3000);
                 } else {
-                    updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000);
+                    updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000, <Link onClick={() => {showInFolder(path)}}>Im Explorer anzeigen</Link>);
                 }
             });
         }

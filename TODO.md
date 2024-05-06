@@ -15,3 +15,4 @@ Implement a sanitizing algorithm which sanitizes all templates (i.e., makes sure
 - [x] Move the Unix and *nix systems to store their data in the Application Support folders as well
 - [x] Add copying the shared object on Linux systems into the bundle
 - [ ] Build an updater (in app)
+- [x] Implement functionality to open created files in explorer/finder

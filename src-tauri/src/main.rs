@@ -7,18 +7,27 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
+use std::process::Command;
 use headless_chrome::{Browser, LaunchOptions};
 use headless_chrome::types::{PrintToPdfOptions};
 use tauri::{AppHandle, Manager, Menu, MenuItem, State, WindowBuilder};
 use crate::ChromeFetcher::{Fetcher, FetcherOptions, Revision};
 use crate::FFI::{create_tables_docx, create_tables_pdf};
 use crate::types::{ApplicationError, FrontendStorage, Storage};
+#[cfg(target_os = "linux")]
+use std::time::Duration;
+#[cfg(target_os = "linux")]
+use std::sync::Mutex;
 
 /// Declares the usage of crate-wide modules.
 mod types;
 mod FFI;
 mod log;
 mod ChromeFetcher;
+
+// Linux struct
+#[cfg(target_os = "linux")]
+pub struct DbusState(Mutex<Option<dbus::blocking::SyncConnection>>);
 
 // Statics
 static VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -873,6 +882,73 @@ fn check_if_pdf_is_available() -> bool {
     }
 }
 
+#[cfg(target_os = "linux")]
+#[tauri::command]
+fn show_item_in_folder(path: String, dbus_state: State<DbusState>) -> Result<(), String> {
+    let dbus_guard = dbus_state.0.lock().map_err(|e| e.to_string())?;
+
+    // see https://gitlab.freedesktop.org/dbus/dbus/-/issues/76
+    if dbus_guard.is_none() || path.contains(",") {
+        let mut path_buf = PathBuf::from(&path);
+        let new_path = match path_buf.is_dir() {
+            true => path,
+            false => {
+                path_buf.pop();
+                path_buf.into_os_string().into_string().unwrap()
+            }
+        };
+        Command::new("xdg-open")
+            .arg(&new_path)
+            .spawn()
+            .map_err(|e| format!("{e:?}"))?;
+    } else {
+        // https://docs.rs/dbus/latest/dbus/
+        let dbus = dbus_guard.as_ref().unwrap();
+        let proxy = dbus.with_proxy(
+            "org.freedesktop.FileManager1",
+            "/org/freedesktop/FileManager1",
+            Duration::from_secs(5),
+        );
+        let (_,): (bool,) = proxy
+            .method_call(
+                "org.freedesktop.FileManager1",
+                "ShowItems",
+                (vec![format!("file://{path}")], ""),
+            )
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+fn show_item_in_folder(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .args(["/select,", &path]) // The comma after select is not a typo
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let path_buf = PathBuf::from(&path);
+        if path_buf.is_dir() {
+            Command::new("open")
+                .args([&path])
+                .spawn()
+                .map_err(|e| e.to_string())?;
+        } else {
+            Command::new("open")
+                .args(["-R", &path])
+                .spawn()
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
 // MARK: Main Function
 /// Main application entry function.
 fn main() {
@@ -976,10 +1052,52 @@ fn main() {
     window_menu = window_menu.add_submenu(file_submenu);
     window_menu = window_menu.add_submenu(other_submenu);
 
+    #[cfg(not(target_os = "linux"))]
     tauri::Builder::default()
         .menu(window_menu.clone())
         .manage(Storage::default())
-        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available])
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder])
+        .setup(|_app| {
+            Ok(())
+        })
+        .on_menu_event(move |ev| {
+            // Get an AppHandle Clone
+            let app_handle = ev.window().app_handle().clone();
+            match ev.menu_item_id() {
+                "showLicenses" => {
+                    if app_handle.windows().contains_key("licenseWindow") {
+                        let windows = app_handle.windows();
+                        let license_window = windows.get("licenseWindow").unwrap();
+                        license_window.show().unwrap();
+                        license_window.set_focus().unwrap();
+                        return;
+                    }
+                    let license_window = WindowBuilder::new(&app_handle.clone(), "licenseWindow", tauri::WindowUrl::App(PathBuf::from("licenses.html")))
+                        .menu(window_menu.clone())
+                        .inner_size(550.0, 600.0)
+                        .title("Open Source Lizenzen".to_string())
+                        .center()
+                        .focused(true)
+                        .visible(true)
+                        .build()
+                        .unwrap();
+                    license_window.show().unwrap();
+                }
+                &_ => {}
+            }
+        })
+        .build(tauri::generate_context!())
+        .unwrap()
+        .run(|_app_handle, _ev| {
+
+        });
+
+    #[cfg(target_os = "linux")]
+    tauri::Builder::default()
+        .menu(window_menu.clone())
+        .manage(Storage::default())
+        .manage(DbusState(Mutex::new(dbus::blocking::SyncConnection::new_session().ok())))
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder])
         .setup(|_app| {
             Ok(())
         })
