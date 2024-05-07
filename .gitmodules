@@ -1,3 +1,6 @@
 [submodule "externals/Clippit"]
 	path = externals/Clippit
 	url = https://github.com/philippremy/Clippit.git
+[submodule "externals/create-dmg"]
+	path = externals/create-dmg
+	url = https://github.com/create-dmg/create-dmg.git
