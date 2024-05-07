@@ -104,8 +104,7 @@ impl Fetcher {
     // look for good existing installation, if none exists then download and install
     pub fn fetch(&self) -> Result<PathBuf> {
         let rev = match self.options.revision {
-            Revision::Specific(ref v) => v.to_string(),
-            Revision::Latest => latest_revision()?,
+            Revision::Specific(ref v) => v.to_string()
         };
 
         if let Ok(chrome_path) = self.chrome_path(&rev) {
