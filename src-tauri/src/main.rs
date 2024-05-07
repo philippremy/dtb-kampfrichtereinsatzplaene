@@ -857,11 +857,18 @@ async fn download_chrome() -> Result<ApplicationError, ()> {
         Some(dirs) => {
             let appdata_roaming_dir = dirs.data_dir();
             let application_externals_dir = appdata_roaming_dir.join("de.philippremy.dtb-kampfrichtereinsatzplaene").join("Externals");
-            let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(true).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1297006".to_string()));
-            let fetcher = Fetcher::new(fetcher_options);
+	    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+            let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(true).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1294836".to_string()));
+	    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+	    let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(true).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1294832".to_string()));
+	    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+	    let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(true).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1294832".to_string()));
+            #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+            let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(true).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1294832".to_string()));
+	    let fetcher = Fetcher::new(fetcher_options);
             let fetched_instance = match fetcher.fetch() {
                 Ok(path) => { path },
-                Err(_err) => { return Ok(ApplicationError::ChromeDownloadError) }
+                Err(err) => { println!("{:?}", err); return Ok(ApplicationError::ChromeDownloadError) }
             };
             // SAFETY: This will only be fetched from different window instances, no race conditions
             // are to be expected. No human is that fast.
