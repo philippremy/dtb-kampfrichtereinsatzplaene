@@ -8,7 +8,8 @@
     "build": "vite build",
     "serve": "vite preview",
     "tauri": "tauri",
-    "createDMG": "cd ./src-tauri && ./macOS_bundle_dmg.sh"
+    "createDMG" : "cd ./src-tauri && ./macOS_bundle_dmg.sh",
+    "tauri-macos": "npm run tauri build && npm run createDMG"
   },
   "license": "MIT",
   "dependencies": {
