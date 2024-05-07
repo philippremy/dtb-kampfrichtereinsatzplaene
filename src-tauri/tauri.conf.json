@@ -110,7 +110,9 @@
       },
       "deb": {
         "files": {
-          "./SharedLibs/libkampfrichtereinsatzplaene_docx.so": "../lib/libkampfrichtereinsatzplaene_docx/build/libkampfrichtereinsatzplaene_docx.so"
+          "./SharedLibs/libkampfrichtereinsatzplaene_docx.so": "../lib/libkampfrichtereinsatzplaene_docx/build/libkampfrichtereinsatzplaene_docx.so",
+          "section": "utils",
+          "priority": "required"
         }
       }
     },
