@@ -1,4 +1,4 @@
-name: 'publish_prerelease'
+name: 'Publish Prerelease'
 
 on:
   push:
@@ -19,8 +19,9 @@ jobs:
             args: '--target aarch64-apple-darwin'
           - platform: 'macos-latest' # for Intel based macs.
             args: '--target x86_64-apple-darwin'
-          - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
-            args: ''
+          # Deactivate Linux builds until further notice; the bundling does not work
+          # - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
+          #  args: ''
           - platform: 'windows-latest'
             args: ''
 
@@ -30,18 +31,18 @@ jobs:
         with:
           submodules: true
 
-      - name: setup node
+      - name: Install Node
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
 
-      - name: install Rust stable
+      - name: Install Rust Stable
         uses: dtolnay/rust-toolchain@stable
         with:
           # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: install dependencies (ubuntu only)
+      - name: Install Linux dependencies (apt)
         if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
         run: |
           sudo apt-get update
@@ -49,16 +50,32 @@ jobs:
         # webkitgtk 4.0 is for Tauri v1 - webkitgtk 4.1 is for Tauri v2.
         # You can remove the one that doesn't apply to your app to speed up the workflow a bit.
 
-      - name: install frontend dependencies
+      - name: Install Node dependencies (npm)
         run: npm install # change this to npm, pnpm or bun depending on which one you use.
 
-      - name: install .NET 8.0
+      - name: Install .NET 8.0
         uses: actions/setup-dotnet@v4
 
-      - uses: tauri-apps/tauri-action@v0
+      - name: Run Tauri Build (Windows & Linux)
+        if: matrix.platform != 'macos-latest'
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          tagName: dtb-kampfrichtereinsatzplaene-pre-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
+          releaseName: 'DTB Kampfrichtereinsatzpläne Prerelease v__VERSION__'
+          releaseBody: '[PRERELEASE] Use with caution and expect bugs, unimplemented functions and other stuff not working!'
+          releaseDraft: true
+          prerelease: true
+          args: ${{ matrix.args }}
+
+      - name: Run Tauri Build (macOS)
+        if: matrix.platform == 'macos-latest'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tauriScript: "npm run tauri-macos"
           tagName: dtb-kampfrichtereinsatzplaene-pre-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
           releaseName: 'DTB Kampfrichtereinsatzpläne Prerelease v__VERSION__'
           releaseBody: '[PRERELEASE] Use with caution and expect bugs, unimplemented functions and other stuff not working!'

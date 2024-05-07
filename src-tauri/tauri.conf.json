@@ -62,7 +62,7 @@
     },
     "bundle": {
       "active": true,
-      "targets": ["deb", "nsis", "msi", "app", "dmg"],
+      "targets": ["nsis", "msi", "app", "dmg"],
       "identifier": "de.philippremy.dtb-kampfrichtereinsatzplaene",
       "icon": [
         "icons/32x32.png",
@@ -78,7 +78,7 @@
       "publisher": "Philipp Remy",
       "macOS": {
         "minimumSystemVersion": "10.13",
-        "license": "../LICENSE.txt",
+        "license": "../installer/LICENSE.rtf",
         "frameworks": ["../lib/libkampfrichtereinsatzplaene_docx/build/libkampfrichtereinsatzplaene_docx.dylib"]
       },
       "windows": {
@@ -87,7 +87,7 @@
         "digestAlgorithm": null,
         "nsis": {
           "license": "../installer/LICENSE.rtf",
-          "installerIcon": "icons/icon.ico",
+          "installerIcon": "../installer/installerIcon.ico",
           "displayLanguageSelector": true,
           "compression": "lzma",
           "headerImage": "../installer/headerImage.bmp",
@@ -110,7 +110,9 @@
       },
       "deb": {
         "files": {
-          "./SharedLibs/libkampfrichtereinsatzplaene_docx.so": "../lib/libkampfrichtereinsatzplaene_docx/build/libkampfrichtereinsatzplaene_docx.so"
+          "./SharedLibs/libkampfrichtereinsatzplaene_docx.so": "../lib/libkampfrichtereinsatzplaene_docx/build/libkampfrichtereinsatzplaene_docx.so",
+          "section": "utils",
+          "priority": "required"
         }
       }
     },

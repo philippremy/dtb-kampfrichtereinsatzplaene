@@ -30,7 +30,6 @@ const PLATFORM: &str = "win";
 #[derive(Clone, Debug)]
 pub enum Revision {
     Specific(String),
-    Latest,
 }
 
 #[derive(Clone, Debug)]
@@ -105,8 +104,7 @@ impl Fetcher {
     // look for good existing installation, if none exists then download and install
     pub fn fetch(&self) -> Result<PathBuf> {
         let rev = match self.options.revision {
-            Revision::Specific(ref v) => v.to_string(),
-            Revision::Latest => latest_revision()?,
+            Revision::Specific(ref v) => v.to_string()
         };
 
         if let Ok(chrome_path) = self.chrome_path(&rev) {
@@ -407,47 +405,5 @@ fn archive_name<R: AsRef<str>>(revision: R) -> &'static str {
         } else {
             "chrome-win32"
         }
-    }
-}
-
-// Returns the latest chrome revision for the current platform.
-// This function will panic on unsupported platforms.
-fn latest_revision() -> Result<String> {
-    let mut url = format!("{DEFAULT_HOST}/chromium-browser-snapshots");
-
-    #[cfg(target_os = "linux")]
-    {
-        url = format!("{url}/Linux_x64/LAST_CHANGE");
-        ureq::get(&url)
-            .call()?
-            .into_string()
-            .map_err(anyhow::Error::from)
-    }
-
-    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    {
-        url = format!("{url}/Mac_Arm/LAST_CHANGE");
-        ureq::get(&url)
-            .call()?
-            .into_string()
-            .map_err(anyhow::Error::from)
-    }
-
-    #[cfg(all(target_os = "macos", not(target_arch = "aarch64")))]
-    {
-        url = format!("{url}/Mac/LAST_CHANGE");
-        ureq::get(&url)
-            .call()?
-            .into_string()
-            .map_err(anyhow::Error::from)
-    }
-
-    #[cfg(windows)]
-    {
-        url = format!("{url}/Win_x64/LAST_CHANGE");
-        ureq::get(&url)
-            .call()?
-            .into_string()
-            .map_err(anyhow::Error::from)
     }
 }
