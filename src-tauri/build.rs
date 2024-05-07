@@ -157,7 +157,7 @@ fn main() {
 
     // If we are on Linux, add the relevant directory to the rpath
     #[cfg(target_os = "linux")]
-    println!("cargo:rustc-link-arg='-Wl,-rpath,$ORIGIN/SharedLibs'");
+    println!("cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN/SharedLibs");
 
     // We finally have everything. God bless us. Let's set the linker flags.
     let build_shared_library_dir = ffi_library_main_dir.clone().join("build");
