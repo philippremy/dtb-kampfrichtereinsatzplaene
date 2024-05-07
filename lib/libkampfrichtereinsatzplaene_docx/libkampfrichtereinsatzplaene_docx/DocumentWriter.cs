@@ -73,8 +73,10 @@ public partial class DocumentWriter
     {
         #if Windows
             File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene\Resources\Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
-        #else
+        #elif MacOS
             File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
+        #else
+            File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
         #endif
     }
 
@@ -292,8 +294,10 @@ public class TableHandler
     
     #if Windows
         private string m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene\Resources\Tabelle_Vorlage_Leer.docx");
-    #else
+    #elif MacOS
         private string m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Tabelle_Vorlage_Leer.docx");
+    #else
+        private string m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Tabelle_Vorlage_Leer.docx");
     #endif
     
     public TableHandler(Kampfgericht[] kampfgerichte, string[]? replacementJudges)
