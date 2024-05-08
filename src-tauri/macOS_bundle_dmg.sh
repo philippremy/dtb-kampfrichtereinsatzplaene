@@ -3,7 +3,7 @@
 APP_NAME="DTB Kampfrichtereinsatzpläne.app"
 DMG_FILE_NAME="DTB Kampfrichtereinsatzpläne.dmg"
 VOLUME_NAME="DTB Kampfrichtereinsatzpläne"
-SOURCE_FOLDER="./target/release/bundle/macos"
+SOURCE_FOLDER=$(find ./target -maxdepth 5 -name "macos" | head -n 1)
 BACKGROUND_IMAGE="../installer/dmgImage.tiff"
 WINDOW_W=720
 WINDOW_H=590
