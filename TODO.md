@@ -16,7 +16,7 @@
 - [x] Add copying the shared object on Linux systems into the bundle
 - [x] Implement functionality to open created files in explorer/finder
 - [x] Implement a panic hook that sends fatal errors via mail to the developer
-- [ ] Update the error logging in the backend library
+- [x] Update the error logging in the backend library
 
 ### To-Do's for 1.1.0
 - [ ] Build an updater (in app)

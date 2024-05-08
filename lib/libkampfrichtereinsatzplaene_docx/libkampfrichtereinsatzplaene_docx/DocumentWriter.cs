@@ -55,6 +55,7 @@ public partial class DocumentWriter
             CopyTemplateToPath();
             SetWkDataInDocument();
             RemoveAltersklassenRow();
+            if (this.wkJudgingTables is null) throw new ArgumentNullException("Member variable wkJudgingTables was null.");
             TableHandler handler = new TableHandler(this.wkJudgingTables.Values.ToArray(), null);
             Table[] regularTables = handler.GenerateRegularTables();
             Table[] finalTables = handler.GenerateFinalTables();
@@ -62,7 +63,7 @@ public partial class DocumentWriter
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            FFI.PrintErrorFromException(e);
             return ApplicationError.CSharpWriteError;
         }
         
@@ -71,114 +72,149 @@ public partial class DocumentWriter
 
     private void CopyTemplateToPath()
     {
+        try
+        {
         #if Windows
-            File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene\Resources\Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
+                File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene\Resources\Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
         #elif MacOS
-            File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
+                File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
         #else
             File.Copy(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Vorlage_Einsatzplan_Leer.docx"), this.savePath, true);
         #endif
+        }
+        catch (Exception e)
+        {
+            FFI.PrintErrorFromException(e);
+        }
     }
 
     private void WriteTablesToDocument(Table[] regularTables, Table[] finalTables)
     {
-        using (WordprocessingDocument document = WordprocessingDocument.Open(this.savePath, true))
+        try
         {
-            if (document.MainDocumentPart is null)
+            using (WordprocessingDocument document = WordprocessingDocument.Open(this.savePath, true))
             {
-                throw new ArgumentNullException("MainDocumentPart of template file is null.");
-            }
-
-            OpenXmlElement insertMark = document.MainDocumentPart.Document.Body!.Descendants<Paragraph>().First(p => p.InnerText == "### Kampfgerichte ###");
-
-            int musicTablesWrittenToPage = 0;
-            int regularTablesWrittenToPage = 0;
-            bool firstPage = true;
-            
-            foreach (Table regularTable in regularTables)
-            {
-                if (IsMusicTable(regularTable))
+                if (document.MainDocumentPart is null)
                 {
-                    if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1 ) || regularTablesWrittenToPage == 3 || (firstPage && musicTablesWrittenToPage == 1))
-                    {
-                        insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
-                        firstPage = false;
-                        insertMark = insertMark.InsertAfterSelf(regularTable);
-                        musicTablesWrittenToPage = 1; 
-                        regularTablesWrittenToPage = 0;
-                    } else
-                    {
-                        insertMark = insertMark.InsertAfterSelf(regularTable);
-                        musicTablesWrittenToPage++;
-                    }
-                } else
-                {
-                    if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1) || regularTablesWrittenToPage == 3 || (firstPage && regularTablesWrittenToPage == 2))
-                    {
-                        insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
-                        firstPage = false;
-                        insertMark = insertMark.InsertAfterSelf(regularTable);
-                        musicTablesWrittenToPage = 0; 
-                        regularTablesWrittenToPage = 1;
-                    } else
-                    {
-                        insertMark = insertMark.InsertAfterSelf(regularTable);
-                        regularTablesWrittenToPage++;
-                    }
+                    throw new ArgumentNullException("Main Document Part of template file is null.");
                 }
-            }
-
-            if (finalTables.Length != 0)
-            { 
-                // The last element will never be a page break we introduced using the foreach loop above, so always insert one
-                // Reset the counter
-                insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
-                musicTablesWrittenToPage = 0;
-                regularTablesWrittenToPage = 0;
-                
-                // Insert the final tables
-                foreach (Table finalTable in finalTables)
+                if (document.MainDocumentPart.Document.Body is null)
                 {
-                    if (IsMusicTable(finalTable))
+                    throw new ArgumentNullException("Main Document Body of template file is null.");
+                }
+                
+                OpenXmlElement insertMark = document.MainDocumentPart.Document.Body.Descendants<Paragraph>()
+                    .First(p => p.InnerText == "### Kampfgerichte ###");
+
+                int musicTablesWrittenToPage = 0;
+                int regularTablesWrittenToPage = 0;
+                bool firstPage = true;
+
+                foreach (Table regularTable in regularTables)
+                {
+                    if (IsMusicTable(regularTable))
                     {
-                        if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1 ) || regularTablesWrittenToPage == 3 || (firstPage && musicTablesWrittenToPage == 1))
+                        if (musicTablesWrittenToPage >= 2 ||
+                            (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1) ||
+                            regularTablesWrittenToPage == 3 || (firstPage && musicTablesWrittenToPage == 1))
                         {
                             insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
                             firstPage = false;
-                            insertMark = insertMark.InsertAfterSelf(finalTable);
-                            musicTablesWrittenToPage = 1; 
+                            insertMark = insertMark.InsertAfterSelf(regularTable);
+                            musicTablesWrittenToPage = 1;
                             regularTablesWrittenToPage = 0;
-                        } else
+                        }
+                        else
                         {
-                            insertMark = insertMark.InsertAfterSelf(finalTable);
+                            insertMark = insertMark.InsertAfterSelf(regularTable);
                             musicTablesWrittenToPage++;
                         }
-                    } else
+                    }
+                    else
                     {
-                        if (musicTablesWrittenToPage >= 2 || (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1) || regularTablesWrittenToPage == 3 || (firstPage && regularTablesWrittenToPage == 2))
+                        if (musicTablesWrittenToPage >= 2 ||
+                            (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1) ||
+                            regularTablesWrittenToPage == 3 || (firstPage && regularTablesWrittenToPage == 2))
                         {
                             insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
                             firstPage = false;
-                            insertMark = insertMark.InsertAfterSelf(finalTable);
-                            musicTablesWrittenToPage = 0; 
+                            insertMark = insertMark.InsertAfterSelf(regularTable);
+                            musicTablesWrittenToPage = 0;
                             regularTablesWrittenToPage = 1;
-                        } else
+                        }
+                        else
                         {
-                            insertMark = insertMark.InsertAfterSelf(finalTable);
+                            insertMark = insertMark.InsertAfterSelf(regularTable);
                             regularTablesWrittenToPage++;
                         }
                     }
                 }
+
+                if (finalTables.Length != 0)
+                {
+                    // The last element will never be a page break we introduced using the foreach loop above, so always insert one
+                    // Reset the counter
+                    insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
+                    musicTablesWrittenToPage = 0;
+                    regularTablesWrittenToPage = 0;
+
+                    // Insert the final tables
+                    foreach (Table finalTable in finalTables)
+                    {
+                        if (IsMusicTable(finalTable))
+                        {
+                            if (musicTablesWrittenToPage >= 2 ||
+                                (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1) ||
+                                regularTablesWrittenToPage == 3 || (firstPage && musicTablesWrittenToPage == 1))
+                            {
+                                insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
+                                firstPage = false;
+                                insertMark = insertMark.InsertAfterSelf(finalTable);
+                                musicTablesWrittenToPage = 1;
+                                regularTablesWrittenToPage = 0;
+                            }
+                            else
+                            {
+                                insertMark = insertMark.InsertAfterSelf(finalTable);
+                                musicTablesWrittenToPage++;
+                            }
+                        }
+                        else
+                        {
+                            if (musicTablesWrittenToPage >= 2 ||
+                                (musicTablesWrittenToPage == 1 && regularTablesWrittenToPage == 1) ||
+                                regularTablesWrittenToPage == 3 || (firstPage && regularTablesWrittenToPage == 2))
+                            {
+                                insertMark = insertMark.InsertAfterSelf(CreatePageBreak());
+                                firstPage = false;
+                                insertMark = insertMark.InsertAfterSelf(finalTable);
+                                musicTablesWrittenToPage = 0;
+                                regularTablesWrittenToPage = 1;
+                            }
+                            else
+                            {
+                                insertMark = insertMark.InsertAfterSelf(finalTable);
+                                regularTablesWrittenToPage++;
+                            }
+                        }
+                    }
+                }
+
+                // Remove the initial insertion mark
+                if (document.MainDocumentPart.Document.Body is null) throw new ArgumentNullException("Main Document Body was null.");
+                document.MainDocumentPart.Document.Body.Descendants<Paragraph>()
+                    .First(p => p.InnerText == "### Kampfgerichte ###").Remove();
+
+                // Save the document if possible
+                if (document.CanSave)
+                {
+                    document.Save();
+                }
             }
-            
-            // Remove the initial insertion mark
-            document.MainDocumentPart.Document.Body!.Descendants<Paragraph>().First(p => p.InnerText == "### Kampfgerichte ###").Remove();
-            
-            // Save the document if possible
-            if (document.CanSave)
-            {
-                document.Save();
-            }
+        }
+        catch (Exception e)
+        {
+            FFI.PrintErrorFromException(e);
         }
     }
 
@@ -195,92 +231,113 @@ public partial class DocumentWriter
 
     private void SetWkDataInDocument()
     {
-        using (WordprocessingDocument document = WordprocessingDocument.Open(this.savePath, true))
+        try
         {
-            string? documentText = null;
-            
-            if (document.MainDocumentPart is null)
+            using (WordprocessingDocument document = WordprocessingDocument.Open(this.savePath, true))
             {
-                throw new ArgumentNullException("MainDocumentPart of template file is null.");
-            }
-            using (StreamReader streamReader = new StreamReader(document.MainDocumentPart.GetStream()))
-            {
-                documentText = streamReader.ReadToEnd();
-            }
-            documentText = WkNameRegex().Replace(documentText, this.wkName ?? "N/A");
-            documentText = WkDateRegex().Replace(documentText, this.wkDate ?? "N/A");
-            documentText = WkPlaceRegex().Replace(documentText, this.wkPlace ?? "N/A");
-            documentText = WkJudgesmeetingTimeRegex().Replace(documentText, this.wkJudgesMeetingTime ?? "N/A");
-            documentText = WkResponsiblePersonRegex().Replace(documentText, this.wkResponsiblePerson ?? "N/A");
-            
-            // Create the string for the replacement judges
-            string replacementJudgesString = "";
-            if (this.wkReplacementJudges is not null && this.wkReplacementJudges.Length != 0)
-            {
-                for (int i = 0; i < this.wkReplacementJudges.Length; i++)
+                string? documentText;
+
+                if (document.MainDocumentPart is null)
                 {
-                    if (i == this.wkReplacementJudges.Length - 1)
+                    throw new ArgumentNullException("MainDocumentPart of template file is null.");
+                }
+
+                using (StreamReader streamReader = new StreamReader(document.MainDocumentPart.GetStream()))
+                {
+                    documentText = streamReader.ReadToEnd();
+                }
+
+                documentText = WkNameRegex().Replace(documentText, this.wkName ?? "N/A");
+                documentText = WkDateRegex().Replace(documentText, this.wkDate ?? "N/A");
+                documentText = WkPlaceRegex().Replace(documentText, this.wkPlace ?? "N/A");
+                documentText = WkJudgesmeetingTimeRegex().Replace(documentText, this.wkJudgesMeetingTime ?? "N/A");
+                documentText = WkResponsiblePersonRegex().Replace(documentText, this.wkResponsiblePerson ?? "N/A");
+
+                // Create the string for the replacement judges
+                string replacementJudgesString = "";
+                if (this.wkReplacementJudges is not null && this.wkReplacementJudges.Length != 0)
+                {
+                    for (int i = 0; i < this.wkReplacementJudges.Length; i++)
                     {
-                        replacementJudgesString += this.wkReplacementJudges[i];
-                    } else
-                    {
-                        replacementJudgesString += this.wkReplacementJudges[i] + ", ";
+                        if (i == this.wkReplacementJudges.Length - 1)
+                        {
+                            replacementJudgesString += this.wkReplacementJudges[i];
+                        }
+                        else
+                        {
+                            replacementJudgesString += this.wkReplacementJudges[i] + ", ";
+                        }
                     }
                 }
-            } else
-            {
-                replacementJudgesString = "Keine";
-            }
+                else
+                {
+                    replacementJudgesString = "Keine";
+                }
 
-            documentText = WkReplacementJudgesRegex().Replace(documentText, replacementJudgesString);
+                documentText = WkReplacementJudgesRegex().Replace(documentText, replacementJudgesString);
 
-            using (StreamWriter streamWriter = new StreamWriter(document.MainDocumentPart.GetStream(FileMode.Create)))
-            {
-                streamWriter.Write(documentText);
+                using (StreamWriter streamWriter =
+                       new StreamWriter(document.MainDocumentPart.GetStream(FileMode.Create)))
+                {
+                    streamWriter.Write(documentText);
+                }
+
+                // Save the document
+                if (document.CanSave)
+                {
+                    document.Save();
+                }
             }
-            
-            // Save the document
-            if (document.CanSave)
-            {
-                document.Save();
-            }
+        }
+        catch (Exception e)
+        {
+            FFI.PrintErrorFromException(e);
         }
     }
     
     // TEMP: Remove row where Altersklassen will be specified in the future!
     private void RemoveAltersklassenRow()
     {
-        using (WordprocessingDocument document = WordprocessingDocument.Open(this.savePath, true))
+        try
         {
-            if (document.MainDocumentPart is null)
+            using (WordprocessingDocument document = WordprocessingDocument.Open(this.savePath, true))
             {
-                throw new ArgumentNullException("MainDocumentPart of template file is null.");
-            }
-            if (document.MainDocumentPart.Document.Body is null)
-            {
-                throw new ArgumentNullException("Body of template file is null.");
-            }
-            var tables = document.MainDocumentPart.Document.Descendants<Table>().ToList();
-            List<TableCell> cellList = new List<TableCell>();
-            foreach (Table t in tables)
-            {
-                var rows = t.Elements<TableRow>();
-                foreach (TableRow row in rows)
+                if (document.MainDocumentPart is null)
                 {
-                    var cells = row.Elements<TableCell>();
-                    foreach (TableCell cell in cells) 
-                        cellList.Add(cell);
+                    throw new ArgumentNullException("MainDocumentPart of template file is null.");
+                }
+
+                if (document.MainDocumentPart.Document.Body is null)
+                {
+                    throw new ArgumentNullException("Body of template file is null.");
+                }
+
+                var tables = document.MainDocumentPart.Document.Descendants<Table>().ToList();
+                List<TableCell> cellList = new List<TableCell>();
+                foreach (Table t in tables)
+                {
+                    var rows = t.Elements<TableRow>();
+                    foreach (TableRow row in rows)
+                    {
+                        var cells = row.Elements<TableCell>();
+                        foreach (TableCell cell in cells)
+                            cellList.Add(cell);
+                    }
+                }
+
+                var q = from c in cellList where c.InnerText == "### Altersklassen ###" select c.Parent;
+                q.First().Remove();
+                if (document.CanSave)
+                {
+                    document.Save();
                 }
             }
-            var q = from c in cellList where c.InnerText == "### Altersklassen ###" select c.Parent;
-            q.First().Remove();
-            if (document.CanSave)
-            {
-                document.Save();
-            }
+        }
+        catch (Exception e)
+        {
+            FFI.PrintErrorFromException(e);
         }
     }
-    
 }
 
 public class TableHandler
@@ -291,22 +348,30 @@ public class TableHandler
     private string[]? m_replacementJudges;
     private List<Kampfgericht> m_final_tables;
     private List<Kampfgericht> m_regular_tables;
-    
-    #if Windows
-        private string m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene\Resources\Tabelle_Vorlage_Leer.docx");
-    #elif MacOS
-        private string m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Tabelle_Vorlage_Leer.docx");
-    #else
-        private string m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Tabelle_Vorlage_Leer.docx");
-    #endif
+    private string m_pathToTableTemplate;
     
     public TableHandler(Kampfgericht[] kampfgerichte, string[]? replacementJudges)
     {
-        this.m_kampfgerichte = kampfgerichte;
-        this.m_replacementJudges = replacementJudges;
-        this.m_regular_tables = new List<Kampfgericht>();
-        this.m_final_tables = new List<Kampfgericht>();
-        SortTables();
+        try
+        {
+            #if Windows
+                m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene\Resources\Tabelle_Vorlage_Leer.docx");
+            #elif MacOS
+                m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Tabelle_Vorlage_Leer.docx");
+            #else
+                m_pathToTableTemplate = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"de.philippremy.dtb-kampfrichtereinsatzplaene/Resources/Tabelle_Vorlage_Leer.docx");
+            #endif
+            this.m_kampfgerichte = kampfgerichte;
+            this.m_replacementJudges = replacementJudges;
+            this.m_regular_tables = new List<Kampfgericht>();
+            this.m_final_tables = new List<Kampfgericht>();
+            SortTables();
+        }
+        catch (Exception e)
+        {
+            FFI.PrintErrorFromException(e);
+            throw new Exception("Error while initializing the TableHandler class. See exception before.");
+        }
     }
 
     public Table[] GenerateRegularTables()
@@ -353,7 +418,10 @@ public class TableHandler
     {
         // We have to clone the object so Unix (and possibly Windows) does not get upset when we open the template file multiple times
         WordprocessingDocument document = WordprocessingDocument.Open(this.m_pathToTableTemplate, true);
-        Table table = document.MainDocumentPart.Document.Body.Descendants<Table>().First().Clone() as Table;
+        if (document.MainDocumentPart is null) throw new ArgumentNullException("Main Document Part was null");
+        if (document.MainDocumentPart.Document.Body is null) throw new ArgumentNullException("Main Document Body was null");
+        Table? table = document.MainDocumentPart.Document.Body.Descendants<Table>().First().Clone() as Table;
+        if (table is null) throw new ArgumentNullException("No tables could be found (table was null)");
         document.Dispose();
         var cells = table.Descendants<TableCell>();
         foreach (var cell in cells)
@@ -586,8 +654,11 @@ public class TableHandler
     {
         // We have to clone the object so Unix (and possibly Windows) does not get upset when we open the template file multiple times
         WordprocessingDocument document = WordprocessingDocument.Open(this.m_pathToTableTemplate, true);
-        Table table = document.MainDocumentPart.Document.Body.Descendants<Table>().First().Clone() as Table;
+        if (document.MainDocumentPart is null) throw new ArgumentNullException("Main Document Part was null");
+        if (document.MainDocumentPart.Document.Body is null) throw new ArgumentNullException("Main Document Body was null");
+        Table? table = document.MainDocumentPart.Document.Body.Descendants<Table>().First().Clone() as Table;
         document.Dispose();
+        if (table is null) throw new ArgumentNullException("No tables could be found (table was null)");
         var cells = table.Descendants<TableCell>();
         foreach (var cell in cells)
         {
@@ -885,19 +956,28 @@ public class TableHandler
 
     private void SortTables()
     {
-        // Differentiate between Final and non-final table
-        foreach (Kampfgericht kampfgericht in this.m_kampfgerichte)
+        try
         {
-            if (kampfgericht.table_is_finale.HasValue && kampfgericht.table_is_finale.Value)
+            // Differentiate between Final and non-final table
+            foreach (Kampfgericht kampfgericht in this.m_kampfgerichte)
             {
-                this.m_final_tables.Add(kampfgericht);
-            } else if (kampfgericht.table_is_finale.HasValue && !kampfgericht.table_is_finale.Value)
-            {
-                this.m_regular_tables.Add(kampfgericht);
+                if (kampfgericht.table_is_finale.HasValue && kampfgericht.table_is_finale.Value)
+                {
+                    this.m_final_tables.Add(kampfgericht);
+                }
+                else if (kampfgericht.table_is_finale.HasValue && !kampfgericht.table_is_finale.Value)
+                {
+                    this.m_regular_tables.Add(kampfgericht);
+                }
             }
+
+            // Sort the tables alphabetically
+            this.m_final_tables = this.m_final_tables.OrderBy(val => val.table_name).ToList();
+            this.m_regular_tables = this.m_regular_tables.OrderBy(val => val.table_name).ToList();
         }
-        // Sort the tables alphabetically
-        this.m_final_tables = this.m_final_tables.OrderBy(val => val.table_name).ToList();
-        this.m_regular_tables = this.m_regular_tables.OrderBy(val => val.table_name).ToList();
+        catch (Exception e)
+        {
+            FFI.PrintErrorFromException(e);
+        }
     }
 }
