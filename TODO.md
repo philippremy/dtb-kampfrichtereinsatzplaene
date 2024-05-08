@@ -17,6 +17,8 @@
 - [x] Implement functionality to open created files in explorer/finder
 - [x] Implement a panic hook that sends fatal errors via mail to the developer
 - [x] Update the error logging in the backend library
+- [x] Implement an automatic build number incrementer
+- [x] Fix theme and DTB logo color bugs
 
 ### To-Do's for 1.1.0
 - [ ] Build an updater (in app)
