@@ -37,34 +37,20 @@ export default function Licenses() {
         Tokio = "https://github.com/tokio-rs/tokio",
     }
 
-    // Theme Hook
-    const useThemeDetector = () => {
-        const [theme, setTheme] = useState(webLightTheme);
-        const mqListener = ((e: any) => {
-            if (e.matches) {
-                setTheme(webDarkTheme);
-            } else {
-                setTheme(webLightTheme);
-            }
-        });
-
-        useEffect(() => {
-            const darkThemeMq = window.matchMedia("(prefers-color-scheme: dark)");
-            darkThemeMq.addListener(mqListener);
-            return () => darkThemeMq.removeListener(mqListener);
-        }, []);
-        return theme;
-    }
-
     // Theme thing :)
-    const theme = useThemeDetector();
+    useEffect(() => {
+        const darkModePreference = window.matchMedia("(prefers-color-scheme: dark)");
+        darkModePreference.matches ? setIsLight(false) : setIsLight(true);
+        darkModePreference.addEventListener("change", e => e.matches ? setIsLight(false) : setIsLight(true));
+    }, []);
+    const [isLight, setIsLight] = useState(true);
 
     async function redirect(product: Repositories) {
         await open(product);
     }
 
     return (
-        <FluentProvider theme={theme}>
+        <FluentProvider theme={isLight ? webLightTheme : webDarkTheme}>
             <div id="mainContainer">
                 <Title3 className={"title"}>Open Source Lizenzen:</Title3>
                 <Divider inset={true} className={"seperator"}/>

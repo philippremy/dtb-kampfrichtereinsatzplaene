@@ -59,27 +59,13 @@ function Editor() {
         });
     }, []);
 
-    // Theme Hook
-    const useThemeDetector = () => {
-        const [theme, setTheme] = useState(webLightTheme);
-        const mqListener = ((e: any) => {
-            if (e.matches) {
-                setTheme(webDarkTheme);
-            } else {
-                setTheme(webLightTheme);
-            }
-        });
-
-        useEffect(() => {
-            const darkThemeMq = window.matchMedia("(prefers-color-scheme: dark)");
-            darkThemeMq.addListener(mqListener);
-            return () => darkThemeMq.removeListener(mqListener);
-        }, []);
-        return theme;
-    }
-
     // Theme thing :)
-    const theme = useThemeDetector();
+    useEffect(() => {
+        const darkModePreference = window.matchMedia("(prefers-color-scheme: dark)");
+        darkModePreference.matches ? setIsLight(false) : setIsLight(true);
+        darkModePreference.addEventListener("change", e => e.matches ? setIsLight(false) : setIsLight(true));
+    }, []);
+    const [isLight, setIsLight] = useState(true);
 
     // Fetch initial data on mount
     useEffect(() => {
@@ -518,7 +504,7 @@ function Editor() {
     const [hintVisible, setHintVisible] = useState(false);
 
     return (
-        <FluentProvider theme={theme}>
+        <FluentProvider theme={isLight ? webLightTheme : webDarkTheme}>
             <div id="editorHeader">
                 <div id="wkInfoContainerWithButton">
                     <Button appearance="subtle" icon={<PenFilled></PenFilled>} id="changeWkInfoButton" onClick={() => setWkOpen(true)} />
