@@ -37,11 +37,7 @@ $CREATE_DMG \
   "${DMG_FILE_NAME}" \
   "${SOURCE_FOLDER}"
 
-# Rename the existing stuff
-MACOS_BUNDLE_DIR="./target/release/bundle"
+first_dmg=$(find ./target -maxdepth 5 -type f -name "*.dmg" | head -n 1)
 
-first_dmg=$(find ./target/release/bundle/dmg -maxdepth 1 -type f -name "*.dmg" | head -n 1)
-file_name=$(basename "$first_dmg")
-
-mv "./${DMG_FILE_NAME}" "${MACOS_BUNDLE_DIR}/dmg/${file_name}"
+mv "./${DMG_FILE_NAME}" "${first_dmg}"
 rm -f "./${DMG_FILE_NAME}"

@@ -1,10 +1,15 @@
-import { defineConfig } from "vite";
+import { defineConfig, type PluginOption } from "vite";
 import { resolve } from 'path'
 import react from "@vitejs/plugin-react";
+import visualizer from "rollup-plugin-visualizer";
+import { execSync } from "child_process";
+
+let revision = execSync('git rev-parse --short HEAD').toString().trim();
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  plugins: [react()],
+
+  plugins: [react(), visualizer({ filename: "./stats/currentJSBloat_commit_" + revision + ".html", gzipSize: true, brotliSize: true }) as PluginOption],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

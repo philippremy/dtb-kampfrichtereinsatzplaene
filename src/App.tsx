@@ -3,6 +3,7 @@ import "./App.css";
 // @ts-ignore
 // This error is a straight-up lie
 import dtbLogo from "./assets/dtb-logo.svg";
+import dtbLogoLight from "./assets/dtb-logo-light.svg";
 import { FluentProvider, webLightTheme, webDarkTheme, Title2, Image, Button, useToastController, Toast, ToastTitle, ToastBody, Toaster, Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions, DialogTrigger, Spinner } from "@fluentui/react-components";
 import { FolderOpenFilled, FormNewFilled } from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api";
@@ -11,27 +12,13 @@ import { getCurrent } from "@tauri-apps/api/window";
 
 function App() {
 
-  // Theme Hook
-  const useThemeDetector = () => {
-    const [theme, setTheme] = useState(webLightTheme);  
-    const mqListener = ((e: any) => {
-        if(e.matches) {
-          setTheme(webDarkTheme);
-        } else {
-          setTheme(webLightTheme);
-        }
-    });
-    
-    useEffect(() => {
-      const darkThemeMq = window.matchMedia("(prefers-color-scheme: dark)");
-      darkThemeMq.addListener(mqListener);
-      return () => darkThemeMq.removeListener(mqListener);
-    }, []);
-    return theme;
-  }
-
   // Theme thing :)
-  const theme = useThemeDetector();
+  useEffect(() => {
+    const darkModePreference = window.matchMedia("(prefers-color-scheme: dark)");
+    darkModePreference.matches ? setIsLight(false) : setIsLight(true);
+    darkModePreference.addEventListener("change", e => e.matches ? setIsLight(false) : setIsLight(true));
+  }, []);
+  const [isLight, setIsLight] = useState(true);
 
   // Function to create a new wettkampf window
   async function createWettkampf() {
@@ -146,10 +133,10 @@ function App() {
   }
 
   return (
-    <FluentProvider theme={theme}>
+    <FluentProvider theme={isLight ? webLightTheme : webDarkTheme}>
       <div id="mainContainer">
         <div id="startupHeader">
-          <Image src={dtbLogo} id="startupDtbLogo"></Image>
+          <Image src={isLight ? dtbLogo : dtbLogoLight} id="startupDtbLogo"></Image>
           <Title2>Kampfrichtereinsatzplantool</Title2>
         </div>
         <div id="startupButtonContainer">

@@ -211,8 +211,6 @@ impl Fetcher {
         )
             .map_err(|_err| anyhow!("Could not create directory at {:?}", path.parent()))?;
 
-        println!("{path:?}");
-
         info!("Creating file for download: {}", &path.display());
         let mut file = OpenOptions::new().create(true).write(true).open(&path)?;
 

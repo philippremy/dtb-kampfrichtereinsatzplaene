@@ -12,7 +12,9 @@ use windows::Win32::Foundation::HANDLE;
 
 #[cfg(not(target_os = "windows"))]
 use std::os::fd::AsRawFd;
+use crate::{STDERR_FILE, STDOUT_FILE};
 
+#[cfg_attr(debug_assertions, allow(dead_code))]
 pub fn activateLogging() -> Result<(), ApplicationError> {
 
     let time_and_date = chrono::Local::now();
@@ -21,10 +23,13 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
     let stdout_file;
     let stderr_file;
 
+    let mut stdout_file_name = format!["LOG__{}__STDOUT.txt", time_and_date_string.clone()];
+    let mut stderr_file_name = format!["LOG__{}__STDERR.txt", time_and_date_string.clone()];
+
     // Severe permission issues on Windows when using the approach above. Windows has unique folders to store application data.
     // Program Directory is not the place for that.
     match directories::BaseDirs::new() {
-        None => {panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.")}
+        None => { panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.") }
         Some(dirs) => {
             let appdata_roaming_dir = dirs.data_dir();
             let application_log_dir = appdata_roaming_dir.join("de.philippremy.dtb-kampfrichtereinsatzplaene").join("Logs");
@@ -36,21 +41,26 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
                 }
             }
             // Create file for stdout
-            stdout_file = match File::create(application_log_dir.join(format!["LOG__{}__STDOUT.txt", time_and_date_string.clone()])) {
+            stdout_file = match File::create(application_log_dir.join(stdout_file_name.clone())) {
                 Ok(file) => {file}
                 Err(err) => {
-                    println!("{:?}", err);
+                    eprintln!("Could not create the file for stdout: {:?}", err);
                     return Err(ApplicationError::FailedToCreateStdOutFileError);
                 }
             };
             // Create file for stdout
-            stderr_file = match File::create(application_log_dir.join(format!["LOG__{}__STDERR.txt", time_and_date_string.clone()])) {
+            stderr_file = match File::create(application_log_dir.join(stderr_file_name.clone())) {
                 Ok(file) => {file}
                 Err(err) => {
-                    println!("{:?}", err);
+                    eprintln!("Could not create the file for stderr: {:?}", err);
                     return Err(ApplicationError::FailedToCreateStdErrFileError);
                 }
             };
+
+            // Overwrite the file names (now an absolute path)!
+            stdout_file_name = application_log_dir.join(stdout_file_name).to_str().unwrap().to_string();
+            stderr_file_name = application_log_dir.join(stderr_file_name).to_str().unwrap().to_string();
+
         }
     }
 
@@ -72,12 +82,12 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
         unsafe {
             let result_stdout = libc::dup2(stdout_file_fd, stdout_fd);
             if result_stdout == -1 {
-                println!("errno: {:?}", std::io::Error::last_os_error());
+                eprintln!("errno: {:?}", std::io::Error::last_os_error());
                 return Err(ApplicationError::LibcDup2StdOutError);
             }
             let result_stderr = libc::dup2(stderr_file_fd, stderr_fd);
             if result_stderr == -1 {
-                println!("errno: {:?}", std::io::Error::last_os_error());
+                eprintln!("errno: {:?}", std::io::Error::last_os_error());
                 return Err(ApplicationError::LibcDup2StdErrError);
             }
         }
@@ -99,17 +109,26 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
         match SetStdHandle(STD_OUTPUT_HANDLE, HANDLE(stdout_file_fh as isize)) {
             Ok(()) => {},
             Err(err) => {
-                println!("errno: {:?}", err);
+                eprintln!("errno: {:?}", err);
                 return Err(ApplicationError::LibcDup2StdOutError);
             }
         }
         match SetStdHandle(STD_ERROR_HANDLE, HANDLE(stderr_file_fh as isize)) {
             Ok(()) => {},
             Err(err) => {
-                println!("errno: {:?}", err);
+                eprintln!("errno: {:?}", err);
                 return Err(ApplicationError::LibcDup2StdErrError);
             }
         }
+    }
+
+    // If everything succeeded, we should set the paths to our global statics
+    // SAFETY: The statics get only accessed by the mail program, which is invoked much later.
+    // We can guarantee that there is no race condition as it will only be written once (might
+    // even not be true)
+    unsafe {
+        STDOUT_FILE = Some(stdout_file_name.clone());
+        STDERR_FILE = Some(stderr_file_name.clone());
     }
 
     return Ok(());

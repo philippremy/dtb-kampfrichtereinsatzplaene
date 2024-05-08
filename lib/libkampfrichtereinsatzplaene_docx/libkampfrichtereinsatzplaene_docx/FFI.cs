@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Collections;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 
 
@@ -39,15 +41,15 @@ public class FFI
         try
         {
             string? rawJSONData = Marshal.PtrToStringUTF8(json_data);
-            if (rawJSONData == null) return ApplicationError.MarshalJSONNullError;
+            if (rawJSONData == null) { PrintError("Marshalled JSON data was null (likely an encoding error)."); return ApplicationError.MarshalJSONNullError; }
             storage = JsonSerializer.Deserialize<Storage>(rawJSONData, SourceGenerationContextStorage.Default.Storage);
             
             savePath = Marshal.PtrToStringUTF8(save_path);
-            if (savePath == null) return ApplicationError.MarshalSavePathNullError;
+            if (savePath == null) { PrintError("Marshalled SavePath raw data was null (likely an encoding error)."); return ApplicationError.MarshalSavePathNullError; }
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            PrintErrorFromException(e);
             return e switch
             {
                 ArgumentNullException => ApplicationError.DeserializeArgumentNullError,
@@ -57,7 +59,7 @@ public class FFI
             };
         }
 
-        if (storage == null) return ApplicationError.StorageNullError;
+        if (storage == null) { PrintError("Storage from marshalled data was null."); return ApplicationError.StorageNullError; }
 
         DocumentWriter writer = new DocumentWriter(storage, savePath);
         
@@ -73,12 +75,12 @@ public class FFI
         try
         {
             string? rawJSONData = Marshal.PtrToStringUTF8(json_data);
-            if (rawJSONData == null) return ApplicationError.MarshalJSONNullError;
+            if (rawJSONData == null) { PrintError("Marshalled JSON data was null (likely an encoding error)."); return ApplicationError.MarshalJSONNullError; }
             storage = JsonSerializer.Deserialize<Storage>(rawJSONData, SourceGenerationContextStorage.Default.Storage);
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            PrintErrorFromException(e);
             return e switch
             {
                 ArgumentNullException => ApplicationError.DeserializeArgumentNullError,
@@ -88,7 +90,7 @@ public class FFI
             };
         }
 
-        if (storage == null) return ApplicationError.StorageNullError;
+        if (storage == null) { PrintError("Storage from marshalled data was null."); return ApplicationError.StorageNullError; }
 
         DocumentWriter writer = new DocumentWriter(storage, savePath);
         
@@ -104,9 +106,9 @@ public class FFI
         try
         {
             savePath = Marshal.PtrToStringUTF8(save_path);
+            if (savePath == null) { PrintError("Marshalled SavePath raw data was null (likely an encoding error)."); return ApplicationError.MarshalSavePathNullError; }
             FileInfo savePathInfo = new FileInfo(savePath);
             string docxSavePath = savePathInfo.FullName.Replace(".pdf", "_temp.docx");
-            if (savePath is null) return ApplicationError.MarshalSavePathNullError;
             ApplicationError docxGeneratedCode = CreateFromRawDataInternal(json_data, docxSavePath);
             if (docxGeneratedCode != ApplicationError.NoError)
             {
@@ -117,9 +119,38 @@ public class FFI
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            PrintErrorFromException(e);
             return ApplicationError.CSharpWriteError;
         }
-        
     }
+
+    public static void PrintError(string message, [CallerLineNumber] int sourceLineNumber = 0, [CallerMemberName] string memberName = "N/A", [CallerFilePath] string sourceFilePath = "N/A")
+    {
+        Console.Error.WriteLine("C# Error in File '" + Path.GetFileName(sourceFilePath) + "' on Line " + sourceLineNumber + " in Method '" + memberName + "':");
+        Console.Error.WriteLine("Message: '" + message + "'\n");
+    }
+    
+    public static void PrintLog(string message, [CallerLineNumber] int sourceLineNumber = 0, [CallerMemberName] string memberName = "N/A", [CallerFilePath] string sourceFilePath = "N/A")
+    {
+        
+        Console.Out.WriteLine("C# Logging (Line " + sourceLineNumber + " in " + Path.GetFileName(sourceFilePath) + "):");
+        Console.Out.WriteLine("Message: '" + message + "'\n");
+    }
+
+    public static void PrintErrorFromException(Exception e, [CallerFilePath] string sourceFilePath = "N/A")
+    {
+        string stackTrace = e.StackTrace ?? "Stacktrace unavailable";
+        string failingMethod = e.TargetSite?.ToString() ?? "Method information unavailable.";
+        string message = e.Message;
+        string? data = null;
+        foreach (DictionaryEntry entry in e.Data)
+        {
+            data += "[KEY]: " + (entry.Key.ToString() ?? "N/A") + "   :   " + (entry.Value?.ToString() ?? "N/A" + " :[VALUE]\n");
+        }
+        Console.Error.WriteLine("C# Exception thrown in File '" + Path.GetFileName(sourceFilePath) + " in Method '" + failingMethod + "':");
+        Console.Error.WriteLine("Message: '" + message + "'\n");
+        Console.Error.WriteLine("Data:\n\n" + (data ?? "No data available.") + "\n");
+        Console.Error.WriteLine("Stack Trace:\n" + stackTrace + "\n");
+    }
+    
 }

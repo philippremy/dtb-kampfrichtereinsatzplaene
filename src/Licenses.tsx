@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { open } from '@tauri-apps/api/shell';
 import "./Licenses.css";
 import { FluentProvider, webLightTheme, webDarkTheme, Accordion, AccordionItem, AccordionHeader, Button, Divider, AccordionPanel, Card, Title3 } from "@fluentui/react-components";
-import { CalendarDateRegular, CodeFilled, FluentRegular, FolderListRegular, FolderSearchRegular, IconsRegular, NumberSymbolRegular, SettingsCogMultipleRegular, StoreMicrosoftRegular, TextAlignJustifyRegular, TextWholeWordRegular, WindowMultipleFilled, DocumentPdfRegular, CommentErrorRegular, WindowConsoleRegular, ArchiveRegular, PlugConnectedCheckmarkRegular, GlobeRegular, PipelineRegular } from "@fluentui/react-icons";
+import { CalendarDateRegular, CodeFilled, FluentRegular, FolderListRegular, FolderSearchRegular, IconsRegular, NumberSymbolRegular, SettingsCogMultipleRegular, StoreMicrosoftRegular, TextAlignJustifyRegular, TextWholeWordRegular, WindowMultipleFilled, DocumentPdfRegular, CommentErrorRegular, WindowConsoleRegular, ArchiveRegular, PlugConnectedCheckmarkRegular, GlobeRegular, PipelineRegular, NumberRowRegular, PersonFeedbackRegular, MailEditRegular, PersonRunningRegular } from "@fluentui/react-icons";
 import { FaGithub, FaFontAwesomeAlt } from "react-icons/fa";
 
 export default function Licenses() {
@@ -31,36 +31,26 @@ export default function Licenses() {
         Dbus = "https://github.com/diwic/dbus-rs",
         Chromium = "https://chromium.googlesource.com/chromium/src.git",
         Clippit = "https://github.com/sergey-tihon/Clippit",
-    }
-
-    // Theme Hook
-    const useThemeDetector = () => {
-        const [theme, setTheme] = useState(webLightTheme);
-        const mqListener = ((e: any) => {
-            if (e.matches) {
-                setTheme(webDarkTheme);
-            } else {
-                setTheme(webLightTheme);
-            }
-        });
-
-        useEffect(() => {
-            const darkThemeMq = window.matchMedia("(prefers-color-scheme: dark)");
-            darkThemeMq.addListener(mqListener);
-            return () => darkThemeMq.removeListener(mqListener);
-        }, []);
-        return theme;
+        Vergen = "https://github.com/rustyhorde/vergen",
+        MailSend = "https://github.com/stalwartlabs/mail-send",
+        MailBuilder = "https://github.com/stalwartlabs/mail-builder",
+        Tokio = "https://github.com/tokio-rs/tokio",
     }
 
     // Theme thing :)
-    const theme = useThemeDetector();
+    useEffect(() => {
+        const darkModePreference = window.matchMedia("(prefers-color-scheme: dark)");
+        darkModePreference.matches ? setIsLight(false) : setIsLight(true);
+        darkModePreference.addEventListener("change", e => e.matches ? setIsLight(false) : setIsLight(true));
+    }, []);
+    const [isLight, setIsLight] = useState(true);
 
     async function redirect(product: Repositories) {
         await open(product);
     }
 
     return (
-        <FluentProvider theme={theme}>
+        <FluentProvider theme={isLight ? webLightTheme : webDarkTheme}>
             <div id="mainContainer">
                 <Title3 className={"title"}>Open Source Lizenzen:</Title3>
                 <Divider inset={true} className={"seperator"}/>
@@ -1455,6 +1445,146 @@ export default function Licenses() {
                                     <b>MIT License</b>
                                     <br/><br/>
                                     Copyright (c) Microsoft Corporation.
+                                    <br/><br/>
+                                    Permission is hereby granted, free of charge, to any person obtaining a copy
+                                    of this software and associated documentation files (the "Software"), to deal
+                                    in the Software without restriction, including without limitation the rights
+                                    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                                    copies of the Software, and to permit persons to whom the Software is
+                                    furnished to do so, subject to the following conditions:
+                                    <br/><br/>
+                                    The above copyright notice and this permission notice shall be included in all
+                                    copies or substantial portions of the Software.
+                                    <br/><br/>
+                                    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+                                    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                                    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                                    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                                    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+                                    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+                                    SOFTWARE.
+                                </div>
+                            </Card>
+                        </AccordionPanel>
+                        <Divider inset={true}/>
+                    </AccordionItem>
+                    <AccordionItem value={"vergen"}>
+                        <AccordionHeader button={<Button appearance={"outline"}/>} icon={<NumberRowRegular/>}>
+                            <div className={"description"}><p><b>vergen</b></p><p>v8.3.1</p><p><i>(MIT)</i></p></div>
+                            <div className={"filler"}/>
+                            <Button appearance={"transparent"} icon={<FaGithub/>}
+                                    onClick={() => redirect(Repositories.Vergen)}/></AccordionHeader>
+                        <AccordionPanel>
+                            <Card className={"panel"}>
+                                <div className={"licenseText"}>
+                                    <b>MIT License</b>
+                                    <br/><br/>
+                                    Copyright (c) 2016 The Rust Project Developers.
+                                    <br/><br/>
+                                    Permission is hereby granted, free of charge, to any person obtaining a copy
+                                    of this software and associated documentation files (the "Software"), to deal
+                                    in the Software without restriction, including without limitation the rights
+                                    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                                    copies of the Software, and to permit persons to whom the Software is
+                                    furnished to do so, subject to the following conditions:
+                                    <br/><br/>
+                                    The above copyright notice and this permission notice shall be included in all
+                                    copies or substantial portions of the Software.
+                                    <br/><br/>
+                                    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+                                    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                                    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                                    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                                    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+                                    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+                                    SOFTWARE.
+                                </div>
+                            </Card>
+                        </AccordionPanel>
+                        <Divider inset={true}/>
+                    </AccordionItem>
+                    <AccordionItem value={"mail-send"}>
+                        <AccordionHeader button={<Button appearance={"outline"}/>} icon={<PersonFeedbackRegular/>}>
+                            <div className={"description"}><p><b>mail-send</b></p><p>v0.4.7</p><p><i>(MIT)</i></p></div>
+                            <div className={"filler"}/>
+                            <Button appearance={"transparent"} icon={<FaGithub/>}
+                                    onClick={() => redirect(Repositories.MailSend)}/></AccordionHeader>
+                        <AccordionPanel>
+                            <Card className={"panel"}>
+                                <div className={"licenseText"}>
+                                    <b>MIT License</b>
+                                    <br/><br/>
+                                    Copyright (c) mail-send Contributors.
+                                    <br/><br/>
+                                    Permission is hereby granted, free of charge, to any person obtaining a copy
+                                    of this software and associated documentation files (the "Software"), to deal
+                                    in the Software without restriction, including without limitation the rights
+                                    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                                    copies of the Software, and to permit persons to whom the Software is
+                                    furnished to do so, subject to the following conditions:
+                                    <br/><br/>
+                                    The above copyright notice and this permission notice shall be included in all
+                                    copies or substantial portions of the Software.
+                                    <br/><br/>
+                                    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+                                    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                                    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                                    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                                    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+                                    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+                                    SOFTWARE.
+                                </div>
+                            </Card>
+                        </AccordionPanel>
+                        <Divider inset={true}/>
+                    </AccordionItem>
+                    <AccordionItem value={"mail-builder"}>
+                        <AccordionHeader button={<Button appearance={"outline"}/>} icon={<MailEditRegular/>}>
+                            <div className={"description"}><p><b>mail-builder</b></p><p>v0.3.1</p><p><i>(MIT)</i></p></div>
+                            <div className={"filler"}/>
+                            <Button appearance={"transparent"} icon={<FaGithub/>}
+                                    onClick={() => redirect(Repositories.MailBuilder)}/></AccordionHeader>
+                        <AccordionPanel>
+                            <Card className={"panel"}>
+                                <div className={"licenseText"}>
+                                    <b>MIT License</b>
+                                    <br/><br/>
+                                    Copyright (c) mail-builder Contributors.
+                                    <br/><br/>
+                                    Permission is hereby granted, free of charge, to any person obtaining a copy
+                                    of this software and associated documentation files (the "Software"), to deal
+                                    in the Software without restriction, including without limitation the rights
+                                    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                                    copies of the Software, and to permit persons to whom the Software is
+                                    furnished to do so, subject to the following conditions:
+                                    <br/><br/>
+                                    The above copyright notice and this permission notice shall be included in all
+                                    copies or substantial portions of the Software.
+                                    <br/><br/>
+                                    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+                                    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                                    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                                    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                                    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+                                    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+                                    SOFTWARE.
+                                </div>
+                            </Card>
+                        </AccordionPanel>
+                        <Divider inset={true}/>
+                    </AccordionItem>
+                    <AccordionItem value={"tokio"}>
+                        <AccordionHeader button={<Button appearance={"outline"}/>} icon={<PersonRunningRegular/>}>
+                            <div className={"description"}><p><b>Tokio</b></p><p>v1.37.0</p><p><i>(MIT)</i></p></div>
+                            <div className={"filler"}/>
+                            <Button appearance={"transparent"} icon={<FaGithub/>}
+                                    onClick={() => redirect(Repositories.Tokio)}/></AccordionHeader>
+                        <AccordionPanel>
+                            <Card className={"panel"}>
+                                <div className={"licenseText"}>
+                                    <b>MIT License</b>
+                                    <br/><br/>
+                                    Copyright (c) 2023 Tokio Contributors.
                                     <br/><br/>
                                     Permission is hereby granted, free of charge, to any person obtaining a copy
                                     of this software and associated documentation files (the "Software"), to deal

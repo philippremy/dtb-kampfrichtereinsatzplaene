@@ -3,6 +3,7 @@ import { Button, Field, FluentProvider, Image, Input, Subtitle2, Toast, ToastBod
 import "./CreateWettkampf.css";
 // @ts-ignore
 import dtbLogo from "./assets/dtb-logo.svg";
+import dtbLogoLight from "./assets/dtb-logo-light.svg";
 import { CalendarFilled, PersonFilled, PinFilled, TimePickerFilled, TrophyFilled } from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api";
 import { getCurrent } from "@tauri-apps/api/window";
@@ -10,27 +11,13 @@ import { FrontendStorage } from "./Editor.tsx";
 
 function CreateWettkampf() {
 
-  // Theme Hook
-  const useThemeDetector = () => {
-    const [theme, setTheme] = useState(webLightTheme);  
-    const mqListener = ((e: any) => {
-        if(e.matches) {
-          setTheme(webDarkTheme);
-        } else {
-          setTheme(webLightTheme);
-        }
-    });
-    
-    useEffect(() => {
-      const darkThemeMq = window.matchMedia("(prefers-color-scheme: dark)");
-      darkThemeMq.addListener(mqListener);
-      return () => darkThemeMq.removeListener(mqListener);
-    }, []);
-    return theme;
-  }
-
   // Theme thing :)
-  const theme = useThemeDetector();
+  useEffect(() => {
+    const darkModePreference = window.matchMedia("(prefers-color-scheme: dark)");
+    darkModePreference.matches ? setIsLight(false) : setIsLight(true);
+    darkModePreference.addEventListener("change", e => e.matches ? setIsLight(false) : setIsLight(true));
+  }, []);
+  const [isLight, setIsLight] = useState(true);
 
   // States for Form Validation
   const [nameState, setNameState] = useState<"none" | "error" | "success" | "warning" | undefined>("none");
@@ -166,10 +153,10 @@ function CreateWettkampf() {
   );
 
   return (
-    <FluentProvider theme={theme}>
+    <FluentProvider theme={isLight ? webLightTheme : webDarkTheme}>
       <div id="mainContents">
         <div id="createWettkampfHeader">
-          <Image src={dtbLogo} id="createWettkampfDtbLogo"></Image>
+          <Image src={isLight ? dtbLogo : dtbLogoLight} id="createWettkampfDtbLogo"></Image>
           <Subtitle2>Kampfrichtereinsatzplantool</Subtitle2>
         </div>
         <div id="formContainer">
