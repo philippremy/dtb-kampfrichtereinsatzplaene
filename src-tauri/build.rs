@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Command, exit};
 use vergen::EmitBuilder;
@@ -26,6 +28,64 @@ fn main() {
             exit(-1);
         }
     };
+
+    // Increment build number, if we are not on a release!
+    // THIS IS THE WORST BTW. I AM SO SORRY.
+    let cargo_toml_path = PathBuf::from(manifest_dir.clone()).join("Cargo.toml");
+    if cargo_toml_path.exists() && cargo_toml_path.is_file() {
+        let cargo_toml_file = match File::options().read(true).open(cargo_toml_path.clone()) {
+            Ok(file) => file,
+            Err(err) =>  {
+                println!("cargo::warning=Could not open Cargo.toml file: {:?}", err);
+                exit(-1);
+            }
+        };
+        let cargo_toml_buffer = BufReader::new(cargo_toml_file);
+        let cargo_toml_lines: Vec<String> = cargo_toml_buffer.lines().map(|line| line.unwrap()).collect();
+        let mut new_line_vec = vec![];
+        for line in &cargo_toml_lines {
+            if line.contains("version =") && !line.contains("{ version =") {
+                let substrings = line.split_once('"').unwrap();
+                // If this fails, this is a regular release build
+                // We just add the line and continue.
+                let version_substrings = match substrings.1.split_once('-') {
+                    Some(substr) => substr,
+                    None => {
+                        let mut line_with_newline = line.clone();
+                        line_with_newline.push_str("\n");
+                        new_line_vec.push(line_with_newline);
+                        continue;
+                    },
+                };
+                let version_triple = version_substrings.0;
+                let prerelease_substrings = version_substrings.1.split_once('-').unwrap();
+                let prerelease_word = prerelease_substrings.0;
+                let prerelease_no = prerelease_substrings.1.strip_suffix('"').unwrap();
+                let mut build_no = prerelease_no.parse::<i64>().unwrap();
+                build_no += 1;
+                new_line_vec.push(format!(r#"version = "{}-{}-{}"{}"#, version_triple, prerelease_word, build_no.to_string(), "\n"));
+            } else {
+                let mut line_with_newline = line.clone();
+                line_with_newline.push_str("\n");
+                new_line_vec.push(line_with_newline);
+            }
+        }
+        // WTF happened here. This is worse than bad. NGL.
+        let mut byte_vec = vec![];
+        for new_line in new_line_vec {
+            for byte in new_line.as_bytes() {
+                byte_vec.push(*byte);
+            }
+        }
+        let mut cargo_toml_file2 = match File::options().read(true).write(true).truncate(true).open(cargo_toml_path) {
+            Ok(file) => file,
+            Err(err) =>  {
+                println!("cargo::warning=Could not open Cargo.toml file: {:?}", err);
+                exit(-1);
+            }
+        };
+        cargo_toml_file2.write_all(byte_vec.as_slice()).unwrap();
+    }
 
     // Get the Source Code file for the FFI libdocx
     let ffi_library_source_file = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib").join("libkampfrichtereinsatzplaene_docx").join("libkampfrichtereinsatzplaene_docx").join("FFI.cs");
