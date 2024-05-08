@@ -1,0 +1,38 @@
+name: 'CI Build on macOS x64 (Self Hosted)'
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+
+    runs-on: "local-runner-macOS-x64"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Node dependencies (npm)
+        run: npm install
+
+      - name: Install .NET 8.0
+        uses: actions/setup-dotnet@v4
+
+      - name: Run Tauri Build (macOS)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tauriScript: "npm run tauri-macos"
