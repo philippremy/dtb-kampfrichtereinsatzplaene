@@ -12,6 +12,7 @@ use windows::Win32::Foundation::HANDLE;
 
 #[cfg(not(target_os = "windows"))]
 use std::os::fd::AsRawFd;
+use crate::{STDERR_FILE, STDOUT_FILE};
 
 pub fn activateLogging() -> Result<(), ApplicationError> {
 
@@ -20,6 +21,9 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
 
     let stdout_file;
     let stderr_file;
+
+    let mut stdout_file_name = format!["LOG__{}__STDOUT.txt", time_and_date_string.clone()];
+    let mut stderr_file_name = format!["LOG__{}__STDERR.txt", time_and_date_string.clone()];
 
     // Severe permission issues on Windows when using the approach above. Windows has unique folders to store application data.
     // Program Directory is not the place for that.
@@ -36,7 +40,7 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
                 }
             }
             // Create file for stdout
-            stdout_file = match File::create(application_log_dir.join(format!["LOG__{}__STDOUT.txt", time_and_date_string.clone()])) {
+            stdout_file = match File::create(application_log_dir.join(stdout_file_name.clone())) {
                 Ok(file) => {file}
                 Err(err) => {
                     println!("{:?}", err);
@@ -44,13 +48,18 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
                 }
             };
             // Create file for stdout
-            stderr_file = match File::create(application_log_dir.join(format!["LOG__{}__STDERR.txt", time_and_date_string.clone()])) {
+            stderr_file = match File::create(application_log_dir.join(stderr_file_name.clone())) {
                 Ok(file) => {file}
                 Err(err) => {
                     println!("{:?}", err);
                     return Err(ApplicationError::FailedToCreateStdErrFileError);
                 }
             };
+
+            // Overwrite the file names (now an absolute path)!
+            stdout_file_name = application_log_dir.join(stdout_file_name).to_str().unwrap().to_string();
+            stderr_file_name = application_log_dir.join(stderr_file_name).to_str().unwrap().to_string();
+
         }
     }
 
@@ -110,6 +119,15 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
                 return Err(ApplicationError::LibcDup2StdErrError);
             }
         }
+    }
+
+    // If everything succeeded, we should set the paths to our global statics
+    // SAFETY: The statics get only accessed by the mail program, which is invoked much later.
+    // We can guarantee that there is no race condition as it will only be written once (might
+    // even not be true)
+    unsafe {
+        STDOUT_FILE = Some(stdout_file_name.clone());
+        STDERR_FILE = Some(stderr_file_name.clone());
     }
 
     return Ok(());

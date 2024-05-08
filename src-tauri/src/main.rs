@@ -5,9 +5,10 @@
 
 use std::path::PathBuf;
 use std::collections::HashMap;
-use std::env;
+use std::{env, thread};
 use std::fs::File;
-use std::process::Command;
+use std::panic::PanicInfo;
+use std::process::{abort, Command};
 use headless_chrome::{Browser, LaunchOptions};
 use headless_chrome::types::{PrintToPdfOptions};
 use tauri::{AppHandle, Manager, Menu, MenuItem, State, WindowBuilder};
@@ -18,21 +19,29 @@ use crate::types::{ApplicationError, FrontendStorage, Storage};
 use std::time::Duration;
 #[cfg(target_os = "linux")]
 use std::sync::Mutex;
+use crate::MailImpl::{MessageKind, send_mail};
 
 /// Declares the usage of crate-wide modules.
 mod types;
 mod FFI;
 mod log;
 mod ChromeFetcher;
+mod MailImpl;
 
 // Linux struct
 #[cfg(target_os = "linux")]
 pub struct DbusState(Mutex<Option<dbus::blocking::SyncConnection>>);
 
 // Statics
-static VERSION: &str = env!("CARGO_PKG_VERSION");
 static mut SAVE_PATH: Option<String> = None;
 static mut CHROME_BIN: Option<PathBuf> = None;
+static LLVM_VER: &'static str = env!("VERGEN_RUSTC_LLVM_VERSION");
+static TARGET_TRIPLE: &'static str = env!("VERGEN_CARGO_TARGET_TRIPLE");
+static GIT_COMMIT: &'static str = env!("VERGEN_GIT_SHA");
+static GIT_BRANCH: &'static str = env!("VERGEN_GIT_BRANCH");
+static APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
+static mut STDOUT_FILE: Option<String> = None;
+static mut STDERR_FILE: Option<String> = None;
 
 // MARK: Func: Update Storage Data
 /// Function to update the global storage from the frontend.
@@ -127,7 +136,7 @@ async fn create_wettkampf(app_handle: AppHandle) -> ApplicationError {
         .license("GPL-3.0-only".to_string())
         .copyright("© Philipp Remy 2024".to_string())
         .comments("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB".to_string())
-        .version(VERSION.to_string())
+        .version(APP_VERSION.to_string())
         .website("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene".to_string())
         .website_label("GitHub Repository".to_string())
     );
@@ -241,7 +250,7 @@ async fn sync_wk_data_and_open_editor(data: FrontendStorage, storage: State<'_, 
         .license("GPL-3.0-only".to_string())
         .copyright("© Philipp Remy 2024".to_string())
         .comments("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB".to_string())
-        .version(VERSION.to_string())
+        .version(APP_VERSION.to_string())
         .website("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene".to_string())
         .website_label("GitHub Repository".to_string())
     );
@@ -754,7 +763,7 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
         .license("GPL-3.0-only".to_string())
         .copyright("© Philipp Remy 2024".to_string())
         .comments("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB".to_string())
-        .version(VERSION.to_string())
+        .version(APP_VERSION.to_string())
         .website("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene".to_string())
         .website_label("GitHub Repository".to_string())
     );
@@ -963,9 +972,50 @@ fn show_item_in_folder(path: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tokio::main]
+async fn send_mail_from_panic(kind: MessageKind, body: String) {
+    send_mail(kind, body).await;
+}
+
 // MARK: Main Function
 /// Main application entry function.
 fn main() {
+
+    // Set panic hook to send mail if possible
+    std::panic::set_hook(Box::new(|info: &PanicInfo| {
+
+        // Execute the regular hook
+        let location = info.location().unwrap();
+
+        let msg = match info.payload().downcast_ref::<&'static str>() {
+            Some(s) => *s,
+            None => match info.payload().downcast_ref::<String>() {
+                Some(s) => &s[..],
+                None => "Box<dyn Any>",
+            },
+        };
+        let thread = thread::current();
+        let name = thread.name().unwrap_or("<unnamed>");
+
+        eprintln!("Thread '{name}' panicked at {location}:\n{msg}");
+
+        // Now hope that everything is flushed!
+        // We can then try to send an email with all the data
+        let error_heading = format!("Thread {name} panicked at {location}.");
+        let error_description = format!("Thread '{name}' panicked at {location}:<br />{msg}");
+        let error = MessageKind::Panic((error_heading, error_description));
+        let handle = std::thread::spawn(move || {
+            if let MessageKind::Panic((_heading, desc)) = error.clone() {
+                send_mail_from_panic(error.clone(), format!("<p>{}</p>", desc));
+            } else {
+                send_mail_from_panic(error.clone(), "<p></p>".to_string());
+            }
+        });
+        match handle.join() {
+            Ok(()) => { abort(); },
+            Err(err) => { eprintln!("Failed to join PanicMailThread: {:?}", err); abort(); },
+        }
+    }));
 
     // Rebase all StdOut and StdErr happenings
     #[cfg(not(debug_assertions))]
@@ -1019,7 +1069,7 @@ fn main() {
         .license("GPL-3.0-only".to_string())
         .copyright("© Philipp Remy 2024".to_string())
         .comments("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB".to_string())
-        .version(VERSION.to_string())
+        .version(APP_VERSION.to_string())
         .website("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene".to_string())
         .website_label("GitHub Repository".to_string())
     );

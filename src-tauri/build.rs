@@ -1,7 +1,20 @@
 use std::path::PathBuf;
 use std::process::{Command, exit};
+use vergen::EmitBuilder;
 
 fn main() {
+
+    // Let vergen do its thing
+    EmitBuilder::builder()
+        .all_build()
+        .git_sha(true)
+        .git_branch()
+        .all_cargo()
+        .all_rustc()
+        .all_sysinfo()
+        .fail_on_error()
+        .emit()
+        .unwrap();
 
     // Get Working Dir from Environment Variable {CARGO_MANIFEST_DIR}
     let manifest_dir = match std::env::var("CARGO_MANIFEST_DIR") {
