@@ -11,7 +11,6 @@ edition = "2021"
 
 [build-dependencies]
 tauri-build = { version = "1.5.1", features = [] }
-const-gen = "1.6.4"
 vergen = { version = "8.3.1", features = ["git", "build", "cargo", "rustc", "si", "gitoxide"] }
 
 [dependencies]
@@ -29,7 +28,6 @@ zip = "0.6.6"
 ureq = "2.9.7"
 mail-send = "0.4.7"
 mail-builder = "0.3.1"
-const-gen = "1.6.4"
 tokio = { version = "1.37.0", features = ["rt", "macros"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
