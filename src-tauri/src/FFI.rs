@@ -27,18 +27,18 @@ pub fn create_tables_docx(storage: &Storage, save_path: PathBuf) -> Result<Appli
     // Serialize data and get pointer to it
     let serialized_data = match serde_json::to_string(storage) {
         Ok(data) => {data}
-        Err(_err) => { return Ok(ApplicationError::JSONSerializeError) }
+        Err(err) => { eprintln!("Could not serialize storage data: {:?}", err); return Ok(ApplicationError::JSONSerializeError) }
     };
     let serialized_data_cstring = match CString::new(serialized_data) {
         Ok(cstr) => {cstr}
-        Err(_err) => { return Ok(ApplicationError::CStringNullError) }
+        Err(err) => { eprintln!("Failed to generate CString for serialized data: {:?}", err); return Ok(ApplicationError::CStringNullError) }
     };
     let serialized_data_cstring_ptr = serialized_data_cstring.as_ptr();
 
     // Get pointer to save path
     let save_path_cstring = match CString::new(save_path.to_str().unwrap()) {
         Ok(cstr) => {cstr}
-        Err(_err) => { return Ok(ApplicationError::CStringNullError) }
+        Err(err) => { eprintln!("Failed to generate CString for save path: {:?}", err); return Ok(ApplicationError::CStringNullError) }
     };
     let save_path_cstring_ptr = save_path_cstring.as_ptr();
 
@@ -59,18 +59,18 @@ pub fn create_tables_pdf(storage: &Storage, save_path: PathBuf) -> Result<Applic
     // Serialize data and get pointer to it
     let serialized_data = match serde_json::to_string(storage) {
         Ok(data) => {data}
-        Err(_err) => { return Ok(ApplicationError::JSONSerializeError) }
+        Err(err) => { eprintln!("Could not serialize storage data: {:?}", err); return Ok(ApplicationError::JSONSerializeError) }
     };
     let serialized_data_cstring = match CString::new(serialized_data) {
         Ok(cstr) => {cstr}
-        Err(_err) => { return Ok(ApplicationError::CStringNullError) }
+        Err(err) => { eprintln!("Failed to generate CString for serialized data: {:?}", err); return Ok(ApplicationError::CStringNullError) }
     };
     let serialized_data_cstring_ptr = serialized_data_cstring.as_ptr();
 
     // Get pointer to save path
     let save_path_cstring = match CString::new(save_path.to_str().unwrap()) {
         Ok(cstr) => {cstr}
-        Err(_err) => { return Ok(ApplicationError::CStringNullError) }
+        Err(err) => { eprintln!("Failed to generate CString for save path: {:?}", err); return Ok(ApplicationError::CStringNullError) }
     };
     let save_path_cstring_ptr = save_path_cstring.as_ptr();
 

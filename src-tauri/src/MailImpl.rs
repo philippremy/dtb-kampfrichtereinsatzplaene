@@ -6,6 +6,8 @@ use crate::{APP_VERSION, GIT_BRANCH, GIT_COMMIT, LLVM_VER, STDERR_FILE, STDOUT_F
 use crate::types::ApplicationError;
 
 #[derive(Clone)]
+// TODO: Remove
+#[allow(unused)]
 pub enum MessageKind {
     Bug(String),
     Feedback(String),
@@ -45,7 +47,7 @@ pub async fn send_mail(kind: MessageKind, body: String) -> ApplicationError {
         .connect()
         .await {
         Ok(client) => client,
-        Err(err) => { println!("Failed to connect to the SMTP Server: {:?}", err); return ApplicationError::SMTPConnectionError; }
+        Err(err) => { eprintln!("Failed to connect to the SMTP Server: {:?}", err); return ApplicationError::SMTPConnectionError; }
     };
 
     let sender_name = format!("DTB Kampfrichtereinsatzpläne v{APP_VERSION}");
@@ -81,14 +83,30 @@ pub async fn send_mail(kind: MessageKind, body: String) -> ApplicationError {
                     // Add data as an appendix
                     message = message.attachment("text/plain", "STDOUT.txt", stdout_buffer);
                     message = message.attachment("text/plain", "STDERR.txt", stderr_buffer);
+                } else {
+                    if stdout_result.is_err() {
+                        eprintln!("STDOUT_FILE could not be read to end: {:?}", stdout_result.unwrap_err());
+                    }
+                    if stderr_result.is_err() {
+                        eprintln!("STDERR_FILE could not be read to end: {:?}", stderr_result.unwrap_err());
+                    }
+                }
+            } else {
+                if stdout_file.is_err() {
+                    eprintln!("STDOUT_FILE could not be opened: {:?}", stdout_file.unwrap_err());
+                }
+                if stderr_file.is_err() {
+                    eprintln!("STDERR_FILE could not be opened: {:?}", stderr_file.unwrap_err());
                 }
             }
+        } else {
+            eprintln!("STDOUT_FILE and STDERR_FILE are 'None': Either we are running a development build or the piping process was not successful.");
         }
     }
 
     match client.send(message).await {
         Ok(()) => {},
-        Err(err) => { println!("Failed to send Message: {:?}", err); return ApplicationError::MessageSendError; }
+        Err(err) => { eprintln!("Failed to send Message: {:?}", err); return ApplicationError::MessageSendError; }
     }
 
     return ApplicationError::NoError;

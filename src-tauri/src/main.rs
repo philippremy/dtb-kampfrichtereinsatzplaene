@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![allow(unused_doc_comments)]
 #![allow(non_snake_case)]
+#![warn(clippy::undocumented_unsafe_blocks)]
 
 use std::path::PathBuf;
 use std::collections::HashMap;
@@ -60,7 +61,8 @@ fn update_storage_data(frontend_storage: FrontendStorage, storage: State<Storage
             *guard = frontend_storage.wk_name;
             drop(guard);
         }
-        Err(_err) => {
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
             return ApplicationError::MutexPoisonedError;
         }
     };
@@ -71,7 +73,8 @@ fn update_storage_data(frontend_storage: FrontendStorage, storage: State<Storage
             *guard = frontend_storage.wk_date;
             drop(guard);
         }
-        Err(_err) => {
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
             return ApplicationError::MutexPoisonedError;
         }
     };
@@ -82,7 +85,8 @@ fn update_storage_data(frontend_storage: FrontendStorage, storage: State<Storage
             *guard = frontend_storage.wk_responsible_person;
             drop(guard);
         }
-        Err(_err) => {
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
             return ApplicationError::MutexPoisonedError;
         }
     };
@@ -93,7 +97,8 @@ fn update_storage_data(frontend_storage: FrontendStorage, storage: State<Storage
             *guard = frontend_storage.wk_judgesmeeting_time;
             drop(guard);
         }
-        Err(_err) => {
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
             return ApplicationError::MutexPoisonedError;
         }
     };
@@ -104,7 +109,8 @@ fn update_storage_data(frontend_storage: FrontendStorage, storage: State<Storage
             *guard = frontend_storage.wk_replacement_judges.unwrap();
             drop(guard);
         }
-        Err(_err) => {
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
             return ApplicationError::MutexPoisonedError;
         }
     };
@@ -115,7 +121,8 @@ fn update_storage_data(frontend_storage: FrontendStorage, storage: State<Storage
             *guard = frontend_storage.wk_judgingtables.unwrap();
             drop(guard);
         }
-        Err(_err) => {
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
             return ApplicationError::MutexPoisonedError;
         }
     };
@@ -185,11 +192,11 @@ async fn create_wettkampf(app_handle: AppHandle) -> ApplicationError {
         .build()
     {
         Ok(window) => {window},
-        Err(_err) => return ApplicationError::TauriWindowCreationError,
+        Err(err) => { eprintln!("Could not build CreateWettkampf window: {:?}", err); return ApplicationError::TauriWindowCreationError },
     };
     match create_wettkampf_window.show() {
         Ok(()) => {},
-        Err(_err) => return ApplicationError::TauriWindowShowError,
+        Err(err) => {eprintln!("Could not show CreateWettkampf window: {:?}", err); return ApplicationError::TauriWindowShowError },
     }
     return ApplicationError::NoError;
 }
@@ -208,7 +215,10 @@ async fn sync_wk_data_and_open_editor(data: FrontendStorage, storage: State<'_, 
             *guard = data.wk_name.clone();
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_place.lock() {
@@ -216,7 +226,10 @@ async fn sync_wk_data_and_open_editor(data: FrontendStorage, storage: State<'_, 
             *guard = data.wk_place;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_date.lock() {
@@ -224,7 +237,10 @@ async fn sync_wk_data_and_open_editor(data: FrontendStorage, storage: State<'_, 
             *guard = data.wk_date;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_judgesmeeting_time.lock() {
@@ -232,7 +248,10 @@ async fn sync_wk_data_and_open_editor(data: FrontendStorage, storage: State<'_, 
             *guard = data.wk_judgesmeeting_time;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_responsible_person.lock() {
@@ -240,7 +259,10 @@ async fn sync_wk_data_and_open_editor(data: FrontendStorage, storage: State<'_, 
             *guard = data.wk_responsible_person;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     // Create all the Menus
@@ -312,11 +334,17 @@ async fn sync_wk_data_and_open_editor(data: FrontendStorage, storage: State<'_, 
     .build()
     {
         Ok(window) => {window},
-        Err(_err) => return Ok(ApplicationError::TauriWindowCreationError),
+        Err(err) => {
+            eprintln!("Could not build the Editor window: {:?}", err);
+            return Ok(ApplicationError::TauriWindowCreationError)
+        },
     };
     match editor_window.show() {
         Ok(()) => {},
-        Err(_err) => return Ok(ApplicationError::TauriWindowShowError),
+        Err(err) => {
+            eprintln!("Could not show the Editor window: {:?}", err);
+            return Ok(ApplicationError::TauriWindowShowError)
+        },
     }
     
     return Ok(ApplicationError::NoError);
@@ -330,7 +358,10 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<(Fronten
             frontend_storage.wk_name = (*guard).clone();
             drop(guard);
         },
-        Err(_err) => return Err(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Err(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_place.lock() {
@@ -338,7 +369,10 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<(Fronten
             frontend_storage.wk_place = (*guard).clone();
             drop(guard);
         },
-        Err(_err) => return Err(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Err(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_date.lock() {
@@ -346,7 +380,10 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<(Fronten
             frontend_storage.wk_date = (*guard).clone();
             drop(guard);
         },
-        Err(_err) => return Err(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Err(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_judgesmeeting_time.lock() {
@@ -354,7 +391,10 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<(Fronten
             frontend_storage.wk_judgesmeeting_time = (*guard).clone();
             drop(guard);
         },
-        Err(_err) => return Err(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Err(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_responsible_person.lock() {
@@ -362,7 +402,10 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<(Fronten
             frontend_storage.wk_responsible_person = (*guard).clone();
             drop(guard);
         },
-        Err(_err) => return Err(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Err(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_replacement_judges.lock() {
@@ -373,7 +416,10 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<(Fronten
                 frontend_storage.wk_replacement_judges = Some((*guard).clone());
             }
         }
-        Err(_err) => return Err(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Err(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_judgingtables.lock() {
@@ -384,7 +430,10 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<(Fronten
                 frontend_storage.wk_judgingtables = Some((*guard).clone());
             }
         }
-        Err(_err) => return Err(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Err(ApplicationError::MutexPoisonedError)
+        },
     }
 
     unsafe { return Ok((frontend_storage, SAVE_PATH.clone())) };
@@ -398,7 +447,10 @@ async fn sync_to_backend_and_save(frontendstorage: FrontendStorage, filepath: St
             *guard = frontendstorage.wk_name.clone();
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_place.lock() {
@@ -406,7 +458,10 @@ async fn sync_to_backend_and_save(frontendstorage: FrontendStorage, filepath: St
             *guard = frontendstorage.wk_place;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_date.lock() {
@@ -414,7 +469,10 @@ async fn sync_to_backend_and_save(frontendstorage: FrontendStorage, filepath: St
             *guard = frontendstorage.wk_date;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_judgesmeeting_time.lock() {
@@ -422,7 +480,10 @@ async fn sync_to_backend_and_save(frontendstorage: FrontendStorage, filepath: St
             *guard = frontendstorage.wk_judgesmeeting_time;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_responsible_person.lock() {
@@ -430,7 +491,10 @@ async fn sync_to_backend_and_save(frontendstorage: FrontendStorage, filepath: St
             *guard = frontendstorage.wk_responsible_person;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_replacement_judges.lock() {
@@ -441,7 +505,10 @@ async fn sync_to_backend_and_save(frontendstorage: FrontendStorage, filepath: St
             };
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_judgingtables.lock() {
@@ -452,19 +519,28 @@ async fn sync_to_backend_and_save(frontendstorage: FrontendStorage, filepath: St
             };
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     // Serialize data
     let serialized_data = match serde_json::to_string(storage.inner()) {
         Ok(data) => {data}
-        Err(_err) => { return Ok(ApplicationError::JSONSerializeError) }
+        Err(err) => {
+            eprintln!("Failed to serialize storage data: {:?}", err);
+            return Ok(ApplicationError::JSONSerializeError)
+        }
     };
 
     // Write file at path!
     match std::fs::write(filepath, serialized_data) {
         Ok(()) => {},
-        Err(_err) => { return Ok(ApplicationError::RustWriteFileError) }
+        Err(err) => {
+            eprintln!("Failed to write serialized wk data to file: {:?}", err);
+            return Ok(ApplicationError::RustWriteFileError)
+        }
     }
 
     return Ok(ApplicationError::NoError);
@@ -480,7 +556,10 @@ async fn sync_to_backend_and_create_docx(frontendstorage: FrontendStorage, filep
             *guard = frontendstorage.wk_name.clone();
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_place.lock() {
@@ -488,7 +567,10 @@ async fn sync_to_backend_and_create_docx(frontendstorage: FrontendStorage, filep
             *guard = frontendstorage.wk_place;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_date.lock() {
@@ -496,7 +578,10 @@ async fn sync_to_backend_and_create_docx(frontendstorage: FrontendStorage, filep
             *guard = frontendstorage.wk_date;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_judgesmeeting_time.lock() {
@@ -504,7 +589,10 @@ async fn sync_to_backend_and_create_docx(frontendstorage: FrontendStorage, filep
             *guard = frontendstorage.wk_judgesmeeting_time;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_responsible_person.lock() {
@@ -512,7 +600,10 @@ async fn sync_to_backend_and_create_docx(frontendstorage: FrontendStorage, filep
             *guard = frontendstorage.wk_responsible_person;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_replacement_judges.lock() {
@@ -523,7 +614,10 @@ async fn sync_to_backend_and_create_docx(frontendstorage: FrontendStorage, filep
             };
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_judgingtables.lock() {
@@ -534,7 +628,10 @@ async fn sync_to_backend_and_create_docx(frontendstorage: FrontendStorage, filep
             };
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     return Ok(create_tables_docx(storage.inner(), PathBuf::from(filepath)).unwrap());
@@ -549,7 +646,10 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
             *guard = frontendstorage.wk_name.clone();
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_place.lock() {
@@ -557,7 +657,10 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
             *guard = frontendstorage.wk_place;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_date.lock() {
@@ -565,7 +668,10 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
             *guard = frontendstorage.wk_date;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_judgesmeeting_time.lock() {
@@ -573,7 +679,10 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
             *guard = frontendstorage.wk_judgesmeeting_time;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_responsible_person.lock() {
@@ -581,7 +690,10 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
             *guard = frontendstorage.wk_responsible_person;
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_replacement_judges.lock() {
@@ -592,7 +704,10 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
             };
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_judgingtables.lock() {
@@ -603,7 +718,10 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
             };
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     // Process backend library docx and html
@@ -626,11 +744,11 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
     // Now use our local chromium install to generate the pdf
     let browser = match Browser::new(LaunchOptions::default_builder().headless(true).enable_logging(true).path(chromium_binary).build().unwrap()) {
         Ok(browser) => { browser },
-        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::BrowserCouldNotBeBuild) }
+        Err(err) => { eprintln!("Could not open a Chromium browser instance: {:?}", err); return Ok(ApplicationError::BrowserCouldNotBeBuild) }
     };
     let tab = match browser.new_tab() {
         Ok(tab) => { tab },
-        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::NewTabCouldNotBeCreated) }
+        Err(err) => { eprintln!("Could not create a new tab in the Chromium browser instance: {:?}", err); return Ok(ApplicationError::NewTabCouldNotBeCreated) }
     };
 
     // Fetch the generated html file
@@ -640,13 +758,13 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
     // Navigate to it
     let mut generated_html_tab = match tab.navigate_to(&format!["file://{}", generated_html.as_str()]) {
         Ok(tab) => { tab },
-        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::NavigationToGeneratedHTMLFileFailed) }
+        Err(err) => { eprintln!("Could not navigate to the specified URL in the Chromium browser instance: {:?}", err); return Ok(ApplicationError::NavigationToGeneratedHTMLFileFailed) }
     };
 
     // Wait for navigation to finish
     generated_html_tab = match generated_html_tab.wait_until_navigated() {
         Ok(tab) => { tab },
-        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::WaitingForNavigationFailed) }
+        Err(err) => { eprintln!("Could not wait until the navigation to the specified URL in the Chromium browser instance finished: {:?}", err); return Ok(ApplicationError::WaitingForNavigationFailed) }
     };
 
     // Print to pdf and get the binary data
@@ -661,25 +779,25 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
     pdf_options.scale = Some(1.0);
     let pdf_data = match generated_html_tab.print_to_pdf(Some(pdf_options)) {
         Ok(data) => { data },
-        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::PDFGenerationInChromiumFailed) }
+        Err(err) => { eprintln!("Could not print the page to a PDF and acquire the data vector from the Chromium browser instance: {:?}", err); return Ok(ApplicationError::PDFGenerationInChromiumFailed) }
     };
 
     // Write the pdf contents to file!
     match std::fs::write(filepath.clone(), pdf_data) {
         Ok(()) => {},
-        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::WritingPDFDataToDiskFailed) }
+        Err(err) => { eprintln!("Could not write the generated PDF contents to the specified PDF file on the hard disk: {:?}", err); return Ok(ApplicationError::WritingPDFDataToDiskFailed) }
     }
 
     // Delete temporary files
     match std::fs::remove_file(generated_html) {
         Ok(()) => {},
-        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed) }
+        Err(err) => { eprintln!("Could not remove temporary generated HTML file: {:?}", err); return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed) }
     }
 
     // Delete temporary files
     match std::fs::remove_file(generated_docx) {
         Ok(()) => {},
-        Err(err) => { println!("{:?}", err); return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed) }
+        Err(err) => { println!("Could not remove temporary generated DOCX file: {:?}", err); return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed) }
     }
 
     return Ok(ApplicationError::NoError);
@@ -696,7 +814,10 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
     // Deserialize the file
     let imported_storage: Storage = match serde_json::from_reader(File::open(filepath).unwrap()) {
         Ok(storage) => {storage},
-        Err(_err) => {return Ok(ApplicationError::JSONDeserializeImporterError)},
+        Err(err) => {
+            eprintln!("Could not deserialize the wk data from the imported file (Maybe the file is corrupt or invalid?): {:?}", err);
+            return Ok(ApplicationError::JSONDeserializeImporterError)
+        },
     };
 
     // Update the storage
@@ -705,7 +826,10 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
             *guard = imported_storage.wk_name.lock().unwrap().clone();
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_place.lock() {
@@ -713,7 +837,10 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
             *guard = imported_storage.wk_place.lock().unwrap().clone();
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_date.lock() {
@@ -721,7 +848,10 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
             *guard = imported_storage.wk_date.lock().unwrap().clone();
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_judgesmeeting_time.lock() {
@@ -729,7 +859,10 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
             *guard = imported_storage.wk_judgesmeeting_time.lock().unwrap().clone();
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_responsible_person.lock() {
@@ -737,7 +870,10 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
             *guard = imported_storage.wk_responsible_person.lock().unwrap().clone();
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_replacement_judges.lock() {
@@ -745,7 +881,10 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
             *guard = imported_storage.wk_replacement_judges.lock().unwrap().clone();
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     match storage.wk_judgingtables.lock() {
@@ -753,7 +892,10 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
             *guard = imported_storage.wk_judgingtables.lock().unwrap().clone();
             drop(guard);
         },
-        Err(_err) => return Ok(ApplicationError::MutexPoisonedError),
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError)
+        },
     }
 
     // Create all the Menus
@@ -825,11 +967,17 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
         .build()
     {
         Ok(window) => {window},
-        Err(_err) => return Ok(ApplicationError::TauriWindowCreationError),
+        Err(err) => {
+            eprintln!("Could not build the Editor window: {:?}", err);
+            return Ok(ApplicationError::TauriWindowCreationError)
+        },
     };
     match editor_window.show() {
         Ok(()) => {},
-        Err(_err) => return Ok(ApplicationError::TauriWindowShowError),
+        Err(err) => {
+            eprintln!("Could not show the Editor window: {:?}", err);
+            return Ok(ApplicationError::TauriWindowShowError)
+        },
     }
 
     return Ok(ApplicationError::NoError);
@@ -855,7 +1003,7 @@ fn check_for_chrome_binary() -> bool {
             let fetcher = Fetcher::new(fetcher_options);
             let fetched_instance = match fetcher.fetch() {
                 Ok(path) => { path },
-                Err(_err) => { return false }
+                Err(err) => { eprintln!("Could not find a suitable Chromium version. This is recoverable (and non-fatal) and the user will be prompted to download one or all Chromium related functionality (i.e., PDFs) will be disabled. Error: {:?}", err); return false }
             };
             // SAFETY: This will only be fetched from different window instances, no race conditions
             // are to be expected. No human is that fast.
@@ -884,7 +1032,7 @@ async fn download_chrome() -> Result<ApplicationError, ()> {
 	    let fetcher = Fetcher::new(fetcher_options);
             let fetched_instance = match fetcher.fetch() {
                 Ok(path) => { path },
-                Err(err) => { println!("{:?}", err); return Ok(ApplicationError::ChromeDownloadError) }
+                Err(err) => { eprintln!("Could not fetch a suitable Chromium version. This is non-recoverable (but non-fatal) and all Chromium related functionality (i.e., PDFs) will be disabled. Error: {:?}", err); return Ok(ApplicationError::ChromeDownloadError) }
             };
             // SAFETY: This will only be fetched from different window instances, no race conditions
             // are to be expected. No human is that fast.
@@ -972,6 +1120,8 @@ fn show_item_in_folder(path: String) -> Result<(), String> {
     Ok(())
 }
 
+// This is only used in the panic hook, therefore we don't care about return values
+// or anything related. We will abort() anyways.
 #[tokio::main]
 async fn send_mail_from_panic(kind: MessageKind, body: String) {
     send_mail(kind, body).await;
@@ -1146,8 +1296,20 @@ fn main() {
                         .build()
                         .unwrap();
                     license_window.show().unwrap();
+                },
+                "showLogs" => {
+                    unsafe {
+                        if STDOUT_FILE.clone().is_some() {
+                            match show_item_in_folder(STDOUT_FILE.clone().unwrap()) {
+                                Ok(()) => {}
+                                Err(err) => { eprintln!("Unable to show the logs in Explorer/Finder: {err}") },
+                            }
+                        } else {
+                            eprintln!("STDOUT_FILE and STDERR_FILE are 'None': Either we are running a development build or the piping process was not successful.");
+                        }
+                    }
                 }
-                &_ => {}
+                &_ => { println!("The following menu is currently not implemented: {}", ev.menu_item_id()); }
             }
         })
         .build(tauri::generate_context!())
