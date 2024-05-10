@@ -19,6 +19,7 @@
 - [x] Update the error logging in the backend library
 - [x] Implement an automatic build number incrementer
 - [x] Fix theme and DTB logo color bugs
+- [ ] Sort tables in Editor following a pattern of nonfinal --> A-Z --> final --> A-Z
 
 ### To-Do's for 1.1.0
 - [ ] Build an updater (in app)
