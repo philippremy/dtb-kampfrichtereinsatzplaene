@@ -31,5 +31,18 @@
   display: flex;
   width: 100%;
   justify-content: right;
+  align-items: center;
   gap: 15px;
+}
+
+.errorText {
+  color: #d13438;
+}
+
+.successText {
+  color: #107c10;
+}
+
+.spacer {
+  flex: 1;
 }
