@@ -74,4 +74,5 @@ pub enum ApplicationError {
     RemovalOfTemporaryGeneratedFilesFailed = 28,
     SMTPConnectionError = 29,
     MessageSendError = 30,
+    TauriExistingWindowNotFoundError = 31,
 }

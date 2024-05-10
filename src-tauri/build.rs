@@ -1,3 +1,6 @@
+// Until incrementing the version number works properly
+#![allow(unused_imports)]
+
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
@@ -28,9 +31,12 @@ fn main() {
             exit(-1);
         }
     };
-
+    
+    // CURRENTLY BUGGY. CAUSES INSTANT REBUILD WITH RUST_ANALYZER.
+    // DEACTIVATE FOR NOW.
     // Increment build number, if we are not on a release!
     // THIS IS THE WORST BTW. I AM SO SORRY.
+    /*
     let cargo_toml_path = PathBuf::from(manifest_dir.clone()).join("Cargo.toml");
     if cargo_toml_path.exists() && cargo_toml_path.is_file() {
         let cargo_toml_file = match File::options().read(true).open(cargo_toml_path.clone()) {
@@ -86,6 +92,7 @@ fn main() {
         };
         cargo_toml_file2.write_all(byte_vec.as_slice()).unwrap();
     }
+    */
 
     // Get the Source Code file for the FFI libdocx
     let ffi_library_source_file = PathBuf::from(manifest_dir.clone()).parent().unwrap().join("lib").join("libkampfrichtereinsatzplaene_docx").join("libkampfrichtereinsatzplaene_docx").join("FFI.cs");
