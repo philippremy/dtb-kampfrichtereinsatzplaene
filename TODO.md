@@ -10,7 +10,7 @@
 - [x] Implement a more robust failure system with better feedback messages
 - [x] Implement a license window
 - [x] Fix window titles
-- [ ] Implement feedback windows
+- [x] Implement feedback windows
 - [x] Fix the way how we find the path of the build library (use the glob crate instead) [Windows only!]
 - [x] Move the Unix and *nix systems to store their data in the Application Support folders as well
 - [x] Add copying the shared object on Linux systems into the bundle
@@ -23,6 +23,7 @@
 ### To-Do's for 1.1.0
 - [ ] Build an updater (in app)
 - [ ] Implement missing menus
+- [ ] Refactor frontend syncing, so we don't have x million loc for the same thing. Makes compiling slow and we could just #[inline(always)] this
 
 ### Possible, but not planned as of now
 - [ ] Implement a sanitizing algorithm which sanitizes all templates (i.e., makes sure that all Text is in one Run)
