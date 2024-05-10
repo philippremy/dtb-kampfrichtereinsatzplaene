@@ -30,6 +30,7 @@ export default defineConfig(async () => ({
         createWettkampf: resolve(__dirname, 'createWettkampf.html'),
         editor: resolve(__dirname, 'editor.html'),
         licenses: resolve(__dirname, 'licenses.html'),
+        bugreporter: resolve(__dirname, 'bugreporter.html')
       },
     },
   },
