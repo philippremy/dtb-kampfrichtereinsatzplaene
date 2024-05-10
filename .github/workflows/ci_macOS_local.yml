@@ -57,7 +57,7 @@ jobs:
         uses: actions/setup-dotnet@v4
 
       - name: Run Tauri Build (macOS)
-        if: matrix.platform == 'macos-latest'
+        if: matrix.platform == 'self-hosted'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
