@@ -14,9 +14,9 @@ jobs:
       matrix:
         include:
           # Luckily we can cross compile for ARM and for x86_64 targets on macOS
-          - platform: 'macos-latest' # for Arm based macs (M1 and above).
+          - platform: 'self-hosted' # for Arm based macs (M1 and above).
             args: '--target aarch64-apple-darwin'
-          - platform: 'macos-latest' # for Intel based macs.
+          - platform: 'self-hosted' # for Intel based macs.
             args: '--target x86_64-apple-darwin'
           # Deactivate Linux builds until further notice; the bundling does not work
           # - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
