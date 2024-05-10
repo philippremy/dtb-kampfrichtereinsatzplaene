@@ -161,10 +161,14 @@ function Editor() {
 
     // Speichern-unter... Funktion hihi
     function saveUnder() {
-        save({filters: [{name: "Wettkampfdatei", extensions: ["wkdata"]}], title: "Wettkampf speichern unter..."}).then((filePath) => {
+        save({filters: [{name: "Wettkampfdatei (.wkdata)", extensions: ["wkdata"]}], title: "Wettkampf speichern unter..."}).then((filePath) => {
             if(filePath === null) {
                 return;
             } else {
+                // Linux might not add the proper file extension
+                if(!filePath.endsWith(".wkdata")) {
+                    filePath = filePath + ".wkdata";
+                }
                 syncToBackendAndSaveWettkampf(filePath);
             }
         });
@@ -406,18 +410,24 @@ function Editor() {
             return;
         }
         if(type === "pdf") {
-            save({filters: [{name: "Adobe Acrobat Portable Document File", extensions: ["pdf"]}], title: "Einsatzplan speichern als PDF"}).then((filePath) => {
+            save({filters: [{name: "Adobe Acrobat Portable Document File (.pdf)", extensions: ["pdf"]}], title: "Einsatzplan speichern als PDF"}).then((filePath) => {
                 if(filePath === null) {
                     return;
                 } else {
+                    if(!filePath.endsWith(".pdf")) {
+                        filePath = filePath + ".docx";
+                    }
                     syncWithBackendAndCreate(filePath, "pdf");
                 }
             });
         } else {
-            save({filters: [{name: "Open XML Wordprocessing Document", extensions: ["docx"]}], title: "Einsatzplan speichern als DOCX"}).then((filePath) => {
+            save({filters: [{name: "Open XML Wordprocessing Document (.docx)", extensions: ["docx"]}], title: "Einsatzplan speichern als DOCX"}).then((filePath) => {
                 if(filePath === null) {
                     return;
                 } else {
+                    if(!filePath.endsWith(".docx")) {
+                        filePath = filePath + ".docx";
+                    }
                     syncWithBackendAndCreate(filePath, "docx");
                 }
             });
