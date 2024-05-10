@@ -78,4 +78,7 @@ public enum ApplicationError {
     PDFGenerationInChromiumFailed = 26,
     WritingPDFDataToDiskFailed = 27,
     RemovalOfTemporaryGeneratedFilesFailed = 28,
+    SMTPConnectionError = 29,
+    MessageSendError = 30,
+    TauriExistingWindowNotFoundError = 31,
 }

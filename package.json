@@ -9,7 +9,7 @@
     "serve": "vite preview",
     "tauri": "tauri",
     "createDMG": "cd ./src-tauri && ./macOS_bundle_dmg.sh",
-    "tauri-macos": "build() { export FLAGS1=\"$1\" && export FLAGS2=\"$2\" && npm run tauri build -- ${FLAGS1} ${FLAGS2} && npm run createDMG; }; build"
+    "tauri-macos": "build() { export FLAGS1=\"$2\" && export FLAGS2=\"$3\" && npm run tauri build -- ${FLAGS1} ${FLAGS2} && npm run createDMG; }; build"
   },
   "license": "MIT",
   "dependencies": {

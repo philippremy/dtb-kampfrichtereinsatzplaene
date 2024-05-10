@@ -11,7 +11,7 @@ use std::fs::File;
 use std::panic::PanicInfo;
 use std::process::{abort, Command};
 use headless_chrome::{Browser, LaunchOptions};
-use headless_chrome::types::{PrintToPdfOptions};
+use headless_chrome::types::PrintToPdfOptions;
 use tauri::{AppHandle, Manager, Menu, MenuItem, State, WindowBuilder};
 use crate::ChromeFetcher::{Fetcher, FetcherOptions, Revision};
 use crate::FFI::{create_tables_docx, create_tables_pdf};
@@ -1120,11 +1120,85 @@ fn show_item_in_folder(path: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn open_bug_reporter(kind: String, app_handle: AppHandle) -> Result<ApplicationError, ()> {
+
+    // If we already found the window, show it. Then we should not create a new one or we might
+    // panic.
+    if app_handle.windows().contains_key("bugReport") {
+        let windows = app_handle.windows();
+        let bug_report_windows = match windows.get("bugReport") {
+            Some(window) => window, 
+            None => { eprintln!("Failed to get the bugReporter window from HashMap, although it was expected to be present."); return Ok(ApplicationError::TauriExistingWindowNotFoundError); }
+        };
+        match bug_report_windows.show() {
+            Ok(()) => { return Ok(ApplicationError::NoError) },
+            Err(err) => { eprintln!("Failed to show BugReport Window: {:?}", err); return Ok(ApplicationError::TauriWindowShowError) }
+        }
+    }
+    
+    // If there was none and we got here, create a new one.
+    let window = match WindowBuilder::new(&app_handle, "bugReport", tauri::WindowUrl::App("bugreporter.html".into()))
+        .inner_size(600.0, 500.0)
+        .center()
+        .title(format!("[{kind}] Report"))
+        .focused(true)
+        .initialization_script(format!(r#"
+            if (window.location.origin === 'https://tauri.app') {{
+                console.log("hello world from js init script");
+                window.__KIND__  = {kind}
+            }}
+        "#).as_str())
+        .build() {
+            Ok(win) => win,
+            Err(err) => { eprintln!("Could not create BugReporter window: {:?}", err); return Ok(ApplicationError::TauriWindowCreationError); }
+        };
+    match window.show() {
+        Ok(()) => {},
+        Err(err) => { eprintln!("Could not show BugReporter window: {:?}", err); return Ok(ApplicationError::TauriWindowShowError) },
+    }
+
+    return Ok(ApplicationError::NoError);
+}
+
+#[tauri::command]
+async fn send_mail_from_frontend(name: Option<String>, mail: Option<String>, subject: String, message: String, sendlogs: bool, kind: String) -> Result<ApplicationError, ()> {
+
+    // First, we need to build a HTML element from the message. Replace all newline chars with <br />
+    let message_formatted = message.replace("\n", "<br />");
+
+    // Create a placeholder string for the final message
+    let final_message: String;
+
+    if name.is_some() && mail.is_some() {
+        final_message = format!("<p>---------<br /><b>{}</b><br /><i>{}</i><br /><br />{message_formatted}</p>", name.unwrap(), mail.unwrap());
+    } else if name.is_some() && mail.is_none() {
+        final_message = format!("<p>---------<br /><b>{}</b><br /><br />{message_formatted}</p>", name.unwrap());
+    } else if name.is_none() && mail.is_some() {
+        final_message = format!("<p><---------<br /><i>{}</i><br /><br />{message_formatted}</p>", mail.unwrap());
+    } else {
+        final_message = format!("<p>---------<br />{message_formatted}</p>");
+    }
+
+    let mail_type: MessageKind;
+    if kind.as_str().contains("BUG") {
+        mail_type = MessageKind::Bug(subject);
+    } else if kind.as_str().contains("FEEDBACK") {
+        mail_type = MessageKind::Feedback(subject);
+    } else if kind.as_str().contains("SUPPORT") {
+        mail_type = MessageKind::Support(subject);
+    } else {
+        mail_type = MessageKind::Unknown;
+    }
+
+    return Ok(send_mail(mail_type, final_message, sendlogs).await);
+}
+
 // This is only used in the panic hook, therefore we don't care about return values
 // or anything related. We will abort() anyways.
 #[tokio::main]
 async fn send_mail_from_panic(kind: MessageKind, body: String) {
-    send_mail(kind, body).await;
+    send_mail(kind, body, true).await;
 }
 
 // MARK: Main Function
@@ -1270,7 +1344,7 @@ fn main() {
     tauri::Builder::default()
         .menu(window_menu.clone())
         .manage(Storage::default())
-        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder])
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder, open_bug_reporter, send_mail_from_frontend])
         .setup(|_app| {
             Ok(())
         })
@@ -1308,7 +1382,16 @@ fn main() {
                             eprintln!("STDOUT_FILE and STDERR_FILE are 'None': Either we are running a development build or the piping process was not successful.");
                         }
                     }
-                }
+                },
+                "contactSupport" => {
+                    open_bug_reporter(String::from("SUPPORT"), app_handle.clone()).unwrap();
+                },
+                "bugReport" => {
+                    open_bug_reporter(String::from("BUG"), app_handle.clone()).unwrap();
+                },
+                "feedback" => {
+                    open_bug_reporter(String::from("FEEDBACK"), app_handle.clone()).unwrap();
+                },
                 &_ => { println!("The following menu is currently not implemented: {}", ev.menu_item_id()); }
             }
         })
@@ -1323,7 +1406,7 @@ fn main() {
         .menu(window_menu.clone())
         .manage(Storage::default())
         .manage(DbusState(Mutex::new(dbus::blocking::SyncConnection::new_session().ok())))
-        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder])
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder, open_bug_reporter, send_mail_from_frontend])
         .setup(|_app| {
             Ok(())
         })
@@ -1349,7 +1432,28 @@ fn main() {
                         .build()
                         .unwrap();
                     license_window.show().unwrap();
-                }
+                },
+                "showLogs" => {
+                    unsafe {
+                        if STDOUT_FILE.clone().is_some() {
+                            match show_item_in_folder(STDOUT_FILE.clone().unwrap()) {
+                                Ok(()) => {}
+                                Err(err) => { eprintln!("Unable to show the logs in Explorer/Finder: {err}") },
+                            }
+                        } else {
+                            eprintln!("STDOUT_FILE and STDERR_FILE are 'None': Either we are running a development build or the piping process was not successful.");
+                        }
+                    }
+                },
+                "contactSupport" => {
+                    open_bug_reporter(String::from("SUPPORT"), app_handle.clone()).unwrap();
+                },
+                "bugReport" => {
+                    open_bug_reporter(String::from("BUG"), app_handle.clone()).unwrap();
+                },
+                "feedback" => {
+                    open_bug_reporter(String::from("FEEDBACK"), app_handle.clone()).unwrap();
+                },
                 &_ => {}
             }
         })

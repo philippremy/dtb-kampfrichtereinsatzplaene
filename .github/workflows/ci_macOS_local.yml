@@ -1,20 +1,19 @@
-name: 'Publish Prerelease'
+name: 'CI Build on macOS (Self Hosted)'
 
 on:
   push:
     branches:
-      - pre-release
-
-# This workflow will trigger on each push to the `release` branch to create or update a GitHub release, build your app, and upload the artifacts to the release.
+      - main
 
 jobs:
-  publish-prerelease-images:
+  ci-build-macos-x64:
     permissions:
       contents: write
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
+          # Luckily we can cross compile for ARM and for x86_64 targets on macOS
           - platform: 'self-hosted' # for Arm based macs (M1 and above).
             args: '--target aarch64-apple-darwin'
           - platform: 'self-hosted' # for Intel based macs.
@@ -22,8 +21,9 @@ jobs:
           # Deactivate Linux builds until further notice; the bundling does not work
           # - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
           #  args: ''
-          - platform: 'windows-latest'
-            args: ''
+          # We can't run Windows on a MacBook. Disable until further notice.
+          # - platform: 'windows-latest'
+          #  args: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -39,7 +39,7 @@ jobs:
       - name: Install Rust Stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
+          # Those targets are only used on macOS runners, so it's in an `if` to slightly speed up windows and linux builds.
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Install Linux dependencies (apt)
@@ -56,19 +56,6 @@ jobs:
       - name: Install .NET 8.0
         uses: actions/setup-dotnet@v4
 
-      - name: Run Tauri Build (Windows & Linux)
-        if: matrix.platform != 'macos-latest'
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: dtb-kampfrichtereinsatzplaene-pre-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
-          releaseName: 'DTB Kampfrichtereinsatzpläne Prerelease v__VERSION__'
-          releaseBody: '[PRERELEASE] Use with caution and expect bugs, unimplemented functions and other stuff not working!'
-          releaseDraft: true
-          prerelease: true
-          args: ${{ matrix.args }}
-
       - name: Run Tauri Build (macOS)
         if: matrix.platform == 'self-hosted'
         uses: tauri-apps/tauri-action@v0
@@ -76,9 +63,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: "npm run tauri-macos"
-          tagName: dtb-kampfrichtereinsatzplaene-pre-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
-          releaseName: 'DTB Kampfrichtereinsatzpläne Prerelease v__VERSION__'
-          releaseBody: '[PRERELEASE] Use with caution and expect bugs, unimplemented functions and other stuff not working!'
-          releaseDraft: true
-          prerelease: true
           args: ${{ matrix.args }}

@@ -1,0 +1,48 @@
+#mainContents {
+  height: calc(100vh - 30px);
+  width: calc(100vw - 30px);
+  display: flex;
+  padding-inline: 15px;
+  padding-block: 15px;
+  flex-direction: column;
+  gap: 15px;
+}
+
+#divider {
+  flex-grow: 0;
+}
+
+#nachrichtField {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+#nachrichtField > span {
+  flex: 1;
+}
+
+#nachricht {
+  flex-grow: 1;
+  max-height: 100vh;
+}
+
+#buttonDiv {
+  display: flex;
+  width: 100%;
+  justify-content: right;
+  align-items: center;
+  gap: 15px;
+}
+
+.errorText {
+  color: #d13438;
+}
+
+.successText {
+  color: #107c10;
+}
+
+.spacer {
+  flex: 1;
+}
