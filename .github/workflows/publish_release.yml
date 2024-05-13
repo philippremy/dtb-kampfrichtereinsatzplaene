@@ -1,12 +1,16 @@
-name: 'Publish Prerelease'
+name: 'Publish Release'
 
 on:
   push:
     branches:
-      - pre-release
+      - production
 
 jobs:
-  publish-prerelease-images:
+  publish-release:
+    environment: Release
+    env:
+      TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+      TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
     permissions:
       contents: write
     strategy:
@@ -20,9 +24,8 @@ jobs:
           # Deactivate Linux builds until further notice; the bundling does not work
           # - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
             #  args: ''
-          # Deactivate Windows so we don't get billed
-          # - platform: 'windows-latest'
-            # args: ''
+          - platform: 'windows-latest'
+            args: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -68,11 +71,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: dtb-kampfrichtereinsatzplaene-pre-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
-          releaseName: 'DTB Kampfrichtereinsatzpläne Prerelease v__VERSION__'
+          tagName: dtb-kampfrichtereinsatzplaene-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
+          releaseName: 'DTB Kampfrichtereinsatzpläne v__VERSION__'
           releaseBody: ${{ env.RELEASE_BODY }}
           releaseDraft: true
-          prerelease: true
+          prerelease: false
+          includeUpdaterJson: true
           args: ${{ matrix.args }}
 
       - name: Run Tauri Build (macOS)
@@ -82,10 +86,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: "npm run tauri-macos"
-          tagName: dtb-kampfrichtereinsatzplaene-pre-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
-          releaseName: 'DTB Kampfrichtereinsatzpläne Prerelease v__VERSION__'
+          tagName: dtb-kampfrichtereinsatzplaene-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
+          releaseName: 'DTB Kampfrichtereinsatzpläne v__VERSION__'
           releaseBody: ${{ env.RELEASE_BODY }}
           releaseDraft: true
-          prerelease: true
+          prerelease: false
           includeUpdaterJson: true
           args: ${{ matrix.args }}
