@@ -10,17 +10,19 @@ use std::{env, thread};
 use std::fs::File;
 use std::panic::PanicInfo;
 use std::process::{abort, Command};
+use std::sync::atomic::{AtomicBool, AtomicI8, Ordering};
 use headless_chrome::{Browser, LaunchOptions};
 use headless_chrome::types::PrintToPdfOptions;
-use tauri::{AppHandle, Manager, Menu, MenuItem, State, WindowBuilder};
+use tauri::{AppHandle, Manager, Menu, MenuItem, RunEvent, State, UpdaterEvent, WindowBuilder};
 use crate::ChromeFetcher::{Fetcher, FetcherOptions, Revision};
 use crate::FFI::{create_tables_docx, create_tables_pdf};
-use crate::types::{ApplicationError, FrontendStorage, Storage};
+use crate::types::{ApplicationError, FrontendStorage, Storage, UpdateAvailablePayload, UpdateProgressPayload};
+use tokio::time::sleep;
+use crate::MailImpl::{MessageKind, send_mail};
 #[cfg(target_os = "linux")]
 use std::time::Duration;
 #[cfg(target_os = "linux")]
 use std::sync::Mutex;
-use crate::MailImpl::{MessageKind, send_mail};
 
 /// Declares the usage of crate-wide modules.
 mod types;
@@ -43,6 +45,16 @@ static GIT_BRANCH: &'static str = env!("VERGEN_GIT_BRANCH");
 static APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 static mut STDOUT_FILE: Option<String> = None;
 static mut STDERR_FILE: Option<String> = None;
+static mut MAINWINDOW_LOADED: AtomicBool = AtomicBool::new(false);
+static mut UPDATE_REQUESTED: AtomicI8 = AtomicI8::new(0);
+
+#[tauri::command]
+fn update_mainwindow_loading_state(visible: bool) {
+    // SAFETY: This is safe, we are only using atomic operations
+    unsafe {
+        MAINWINDOW_LOADED.store(visible, Ordering::Relaxed);
+    }
+}
 
 // MARK: Func: Update Storage Data
 /// Function to update the global storage from the frontend.
@@ -1201,6 +1213,18 @@ async fn send_mail_from_panic(kind: MessageKind, body: String) {
     send_mail(kind, body, true).await;
 }
 
+#[tauri::command]
+fn update_app(requested: bool) {
+    // SAFETY: We only use atomics here, so this is fine.
+    unsafe {
+        if requested {
+            UPDATE_REQUESTED.store(1, Ordering::Relaxed);
+        } else {
+            UPDATE_REQUESTED.store(-1, Ordering::Relaxed);
+        }
+    }
+}
+
 // MARK: Main Function
 /// Main application entry function.
 fn main() {
@@ -1344,8 +1368,55 @@ fn main() {
     tauri::Builder::default()
         .menu(window_menu.clone())
         .manage(Storage::default())
-        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder, open_bug_reporter, send_mail_from_frontend])
-        .setup(|_app| {
+        .updater_target(tauri::utils::platform::target_triple().unwrap())
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder, open_bug_reporter, send_mail_from_frontend, update_mainwindow_loading_state, update_app])
+        .setup(|app| {
+            let handle = app.handle();
+            tauri::async_runtime::spawn(async move {
+
+                // Wait until the Window loaded, otherwise we might be too fast and
+                // don't receive the events
+                // SAFETY: This is safe, we are only accessing atomics
+                unsafe {
+                    while !MAINWINDOW_LOADED.load(Ordering::Relaxed) {
+                        sleep(std::time::Duration::from_millis(100)).await;
+                    }
+                }
+
+                match tauri::updater::builder(handle.clone()).check().await {
+                    Ok(update) => {
+
+                        // We have to wait for an answer from the frontend
+                        // SAFETY: We only use atomic operations, so this is safe
+                        unsafe {
+                            while UPDATE_REQUESTED.load(Ordering::Relaxed) == 0 {
+                                sleep(std::time::Duration::from_millis(100)).await;
+                            }
+                            if UPDATE_REQUESTED.load(Ordering::Relaxed) == -1 {
+                                // Update was cancelled, exit the loop
+                                return;
+                            } else if UPDATE_REQUESTED.load(Ordering::Relaxed) == 1 {
+                                // Update was requested, start with it
+                                match update.download_and_install().await {
+                                    Ok(()) => {},
+                                    Err(err) => {
+                                        eprintln!("Could not download and install the update: {:?}", err);
+                                    }
+                                }
+                            } else {
+                                eprintln!("Unexpected atomic value of UPDATE_REQUESTED found: {:?}", UPDATE_REQUESTED.load(Ordering::Relaxed));
+                            }
+                        }
+                    },
+                    Err(err) => {
+                        eprintln!("Could not fetch Update information: {:?}", err);
+                        match handle.clone().emit_to("mainUI", "updateThrewError", err.to_string()) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateThrewError to frontend: {:?}", err); }
+                        }
+                    }
+                }
+            });
             Ok(())
         })
         .on_menu_event(move |ev| {
@@ -1397,8 +1468,55 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .unwrap()
-        .run(|_app_handle, _ev| {
-
+        .run(|app_handle, ev| match ev {
+            RunEvent::Updater(update_event) => {
+                match update_event {
+                    UpdaterEvent::UpdateAvailable { body, date, version } => {
+                        match app_handle.emit_to("mainUI", "updateIsAvailable", UpdateAvailablePayload{ body, date: date.unwrap().to_string(), version }) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateIsAvailable to frontend: {:?}", err); }
+                        }
+                    }
+                    UpdaterEvent::Pending => {
+                        match app_handle.emit_to("mainUI", "updateIsPending", {}) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateIsPending to frontend: {:?}", err); }
+                        }
+                    }
+                    UpdaterEvent::DownloadProgress { chunk_length, content_length } => {
+                        match app_handle.emit_to("mainUI", "updateHasProgress", UpdateProgressPayload{ chunk_len: chunk_length, content_len: content_length }) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateHasProgress to frontend: {:?}", err); }
+                        }
+                    }
+                    UpdaterEvent::Downloaded => {
+                        match app_handle.emit_to("mainUI", "updateIsDownloaded", {}) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateIsDownloaded to frontend: {:?}", err); }
+                        }
+                    }
+                    UpdaterEvent::Updated => {
+                        match app_handle.emit_to("mainUI", "updateIsFinished", {}) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateIsFinished to frontend: {:?}", err); }
+                        }
+                    }
+                    UpdaterEvent::AlreadyUpToDate => {
+                        match app_handle.emit_to("mainUI", "noUpdateAvailable", {}) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit noUpdateAvailable to frontend: {:?}", err); }
+                        }
+                    }
+                    UpdaterEvent::Error(err) => {
+                        match app_handle.emit_to("mainUI", "updateThrewError", err.clone()) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateThrewError to frontend: {:?}", err); }
+                        }
+                        eprintln!("Error while handling the app update: {:?}", err);
+                    }
+                }
+            }
+            _ => { }
         });
 
     #[cfg(target_os = "linux")]
@@ -1406,8 +1524,55 @@ fn main() {
         .menu(window_menu.clone())
         .manage(Storage::default())
         .manage(DbusState(Mutex::new(dbus::blocking::SyncConnection::new_session().ok())))
-        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder, open_bug_reporter, send_mail_from_frontend])
-        .setup(|_app| {
+        .updater_target(tauri::utils::platform::target_triple().unwrap())
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder, open_bug_reporter, send_mail_from_frontend, update_mainwindow_loading_state, update_app])
+        .setup(|app| {
+            let handle = app.handle();
+            tauri::async_runtime::spawn(async move {
+
+                // Wait until the Window loaded, otherwise we might be too fast and
+                // don't receive the events
+                // SAFETY: This is safe, we are only accessing atomics
+                unsafe {
+                    while !crate::MAINWINDOW_LOADED.load(Ordering::Relaxed) {
+                        sleep(std::time::Duration::from_millis(100)).await;
+                    }
+                }
+
+                match tauri::updater::builder(handle.clone()).check().await {
+                    Ok(update) => {
+
+                        // We have to wait for an answer from the frontend
+                        // SAFETY: We only use atomic operations, so this is safe
+                        unsafe {
+                            while crate::UPDATE_REQUESTED.load(Ordering::Relaxed) == 0 {
+                                sleep(std::time::Duration::from_millis(100)).await;
+                            }
+                            if crate::UPDATE_REQUESTED.load(Ordering::Relaxed) == -1 {
+                                // Update was cancelled, exit the loop
+                                return;
+                            } else if crate::UPDATE_REQUESTED.load(Ordering::Relaxed) == 1 {
+                                // Update was requested, start with it
+                                match update.download_and_install().await {
+                                    Ok(()) => {},
+                                    Err(err) => {
+                                        eprintln!("Could not download and install the update: {:?}", err);
+                                    }
+                                }
+                            } else {
+                                eprintln!("Unexpected atomic value of UPDATE_REQUESTED found: {:?}", crate::UPDATE_REQUESTED.load(Ordering::Relaxed));
+                            }
+                        }
+                    },
+                    Err(err) => {
+                        eprintln!("Could not fetch Update information: {:?}", err);
+                        match handle.clone().emit_to("mainUI", "updateThrewError", err.to_string()) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateThrewError to frontend: {:?}", err); }
+                        }
+                    }
+                }
+            });
             Ok(())
         })
         .on_menu_event(move |ev| {
@@ -1459,7 +1624,55 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .unwrap()
-        .run(|_app_handle, _ev| {
-
+        .run(|app_handle, ev| match ev {
+            RunEvent::Updater(update_event) => {
+                println!("Update event: {:?}", update_event);
+                match update_event {
+                    UpdaterEvent::UpdateAvailable { body, date, version } => {
+                        match app_handle.emit_to("mainUI", "updateIsAvailable", UpdateAvailablePayload{ body, date: date.unwrap().to_string(), version }) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateIsAvailable to frontend: {:?}", err); }
+                        }
+                    }
+                    UpdaterEvent::Pending => {
+                        match app_handle.emit_to("mainUI", "updateIsPending", {}) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateIsPending to frontend: {:?}", err); }
+                        }
+                    }
+                    UpdaterEvent::DownloadProgress { chunk_length, content_length } => {
+                        match app_handle.emit_to("mainUI", "updateHasProgress", UpdateProgressPayload{ chunk_len: chunk_length, content_len: content_length }) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateHasProgress to frontend: {:?}", err); }
+                        }
+                    }
+                    UpdaterEvent::Downloaded => {
+                        match app_handle.emit_to("mainUI", "updateIsDownloaded", {}) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateIsDownloaded to frontend: {:?}", err); }
+                        }
+                    }
+                    UpdaterEvent::Updated => {
+                        match app_handle.emit_to("mainUI", "updateIsFinished", {}) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateIsFinished to frontend: {:?}", err); }
+                        }
+                    }
+                    UpdaterEvent::AlreadyUpToDate => {
+                        match app_handle.emit_to("mainUI", "noUpdateAvailable", {}) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit noUpdateAvailable to frontend: {:?}", err); }
+                        }
+                    }
+                    UpdaterEvent::Error(err) => {
+                        match app_handle.emit_to("mainUI", "updateThrewError", err.clone()) {
+                            Ok(()) => {},
+                            Err(err) => { eprintln!("Failed to emit updateThrewError to frontend: {:?}", err); }
+                        }
+                        eprintln!("Error while handling the app update: {:?}", err);
+                    }
+                }
+            }
+            _ => { }
         });
 }

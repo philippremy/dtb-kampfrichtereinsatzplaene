@@ -9,8 +9,14 @@ import { FolderOpenFilled, FormNewFilled } from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api";
 import { open } from '@tauri-apps/api/dialog';
 import { getCurrent } from "@tauri-apps/api/window";
+import {listen, UnlistenFn} from "@tauri-apps/api/event";
+import {marked} from "marked";
 
 function App() {
+
+  function parseMarkdown(body: string) {
+    return {__html: marked.parse(body, {async: false})};
+  }
 
   // Theme thing :)
   useEffect(() => {
@@ -19,6 +25,75 @@ function App() {
     darkModePreference.addEventListener("change", e => e.matches ? setIsLight(false) : setIsLight(true));
   }, []);
   const [isLight, setIsLight] = useState(true);
+
+  // Hook for listening for updates
+  useEffect(() => {
+
+    // Lets create an array of Promises of UnlistenFns that we can iterate over later
+    const unlistenArray = new Array<Promise<UnlistenFn>>();
+
+    // LISTEN FOR UPDATE AVAILABLE
+    unlistenArray.push(listen("updateIsAvailable", (event) => {
+      // @ts-ignore
+      setUpdateDialogTitle("Es ist ein Update verfügbar.");
+      setUpdateDialogContent(
+        <>
+          <div dangerouslySetInnerHTML={
+              // @ts-ignore
+              parseMarkdown(event.payload.body)
+            }></div>
+        </>
+      );
+      setUpdateDialogOpen(true);
+    }));
+
+    // LISTEN FOR UPDATE PENDING
+    unlistenArray.push(listen("updateIsPending", (event) => {
+
+    }));
+
+    // LISTEN FOR DOWNLOAD PROGRESS
+    unlistenArray.push(listen("updateHasProgress", (event) => {
+
+    }));
+
+    // LISTEN FOR DOWNLOAD FINISHED
+    unlistenArray.push(listen("updateIsDownloaded", (event) => {
+
+    }));
+
+    // LISTEN FOR UPDATE FINISHED
+    unlistenArray.push(listen("updateIsFinished", (event) => {
+
+    }));
+
+    // LISTEN FOR ALREADY UP-TO-DATE
+    unlistenArray.push(listen("noUpdateAvailable", (event) => {
+
+    }));
+
+    // LISTEN FOR UPDATE ERROR
+    unlistenArray.push(listen("updateThrewError", (event) => {
+
+    }));
+
+    // We mounted, so it is safe to receive any events now.
+    invoke("update_mainwindow_loading_state", {visible: true}).then(() => {});
+
+    return () => {
+      unlistenArray.forEach((unlistenFn) => unlistenFn.then(f => f()));
+    };
+  }, []);
+
+  // States for the update dialog
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [updateDialogTitle, setUpdateDialogTitle] = useState("");
+  const [updateDialogContent, setUpdateDialogContent] = useState(<></>);
+
+  // Function to start updating the App
+  function updateApp(requested: boolean) {
+    invoke("update_app", {requested: requested}).then(() => {});
+  }
 
   // Function to create a new wettkampf window
   async function createWettkampf() {
@@ -161,6 +236,24 @@ function App() {
                 <Button appearance={"secondary"} onClick={() => setDialogOpen(false)}>Nicht herunterladen</Button>
               </DialogTrigger>
                 <Button appearance={"primary"} onClick={() => downloadChrome()}>Herunterladen</Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+      <Dialog modalType={"alert"} open={updateDialogOpen} >
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>
+              {updateDialogTitle}
+            </DialogTitle>
+            <DialogContent>
+              {updateDialogContent}
+            </DialogContent>
+            <DialogActions fluid={true}>
+              <DialogTrigger disableButtonEnhancement>
+                <Button appearance={"secondary"} onClick={() => {updateApp(false); setUpdateDialogOpen(false)}}>Nicht installieren</Button>
+              </DialogTrigger>
+              <Button appearance={"primary"} onClick={() => updateApp(true)}>Installieren</Button>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
