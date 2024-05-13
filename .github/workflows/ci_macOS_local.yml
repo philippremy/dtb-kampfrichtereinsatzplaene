@@ -23,7 +23,7 @@ jobs:
           #  args: ''
           # We can't run Windows on a MacBook. Disable until further notice.
           # - platform: 'windows-latest'
-          #  args: ''
+            #  args: ''
 
     runs-on: ${{ matrix.platform }}
     steps:

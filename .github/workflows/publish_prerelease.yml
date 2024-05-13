@@ -26,9 +26,8 @@ jobs:
           # Deactivate Linux builds until further notice; the bundling does not work
           # - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
           #  args: ''
-          # Deactivate Windows so we don't get billed for all our testing
-          # - platform: 'windows-latest'
-            # args: ''
+          - platform: 'windows-latest'
+            args: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
