@@ -75,7 +75,7 @@ jobs:
         with:
           tagName: dtb-kampfrichtereinsatzplaene-pre-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
           releaseName: 'DTB Kampfrichtereinsatzpläne Prerelease v__VERSION__'
-          releaseBody: '[PRERELEASE] Use with caution and expect bugs, unimplemented functions and other stuff not working!'
+          releaseBody: ${{ env.RELEASE_BODY }}
           releaseDraft: true
           prerelease: true
           args: ${{ matrix.args }}
@@ -89,7 +89,7 @@ jobs:
           tauriScript: "npm run tauri-macos"
           tagName: dtb-kampfrichtereinsatzplaene-pre-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
           releaseName: 'DTB Kampfrichtereinsatzpläne Prerelease v__VERSION__'
-          releaseBody: '[PRERELEASE] Use with caution and expect bugs, unimplemented functions and other stuff not working!'
+          releaseBody: ${{ env.RELEASE_BODY }}
           releaseDraft: true
           prerelease: true
           includeUpdaterJson: true
