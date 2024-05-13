@@ -88,4 +88,5 @@ jobs:
           releaseBody: '[PRERELEASE] Use with caution and expect bugs, unimplemented functions and other stuff not working!'
           releaseDraft: true
           prerelease: true
+          includeUpdaterJson: true
           args: ${{ matrix.args }}
