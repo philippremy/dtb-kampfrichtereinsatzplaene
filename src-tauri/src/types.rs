@@ -76,3 +76,16 @@ pub enum ApplicationError {
     MessageSendError = 30,
     TauriExistingWindowNotFoundError = 31,
 }
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct UpdateAvailablePayload {
+    pub(crate) body: String,
+    pub(crate) date: String,
+    pub(crate) version: String
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct UpdateProgressPayload {
+    pub(crate) chunk_len: usize,
+    pub(crate) content_len: Option<u64>
+}
