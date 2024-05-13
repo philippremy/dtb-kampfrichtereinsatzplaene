@@ -63,4 +63,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: "npm run tauri-macos"
+          includeRelease: false
+          includeDebug: true
           args: ${{ matrix.args }}

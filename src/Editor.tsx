@@ -415,7 +415,7 @@ function Editor() {
                     return;
                 } else {
                     if(!filePath.endsWith(".pdf")) {
-                        filePath = filePath + ".docx";
+                        filePath = filePath + ".pdf";
                     }
                     syncWithBackendAndCreate(filePath, "pdf");
                 }
