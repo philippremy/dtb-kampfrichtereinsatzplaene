@@ -7,6 +7,10 @@ on:
 
 jobs:
   ci-build-macos-x64:
+    environment: Release
+    env:
+      TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+      TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
     permissions:
       contents: write
     strategy:
@@ -56,6 +60,12 @@ jobs:
       - name: Install .NET 8.0
         uses: actions/setup-dotnet@v4
 
+      - name: Load Environment Variables (Release Notes)
+        uses: xom9ikk/dotenv@v2
+        with:
+          path: environment
+          mode: production
+
       - name: Run Tauri Build (macOS)
         if: matrix.platform == 'self-hosted'
         uses: tauri-apps/tauri-action@v0
@@ -63,6 +73,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: "npm run tauri-macos"
-          includeRelease: false
-          includeDebug: true
           args: ${{ matrix.args }}
