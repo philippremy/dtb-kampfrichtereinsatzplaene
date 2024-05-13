@@ -63,7 +63,6 @@ jobs:
         with:
           path: environment
           mode: production
-          load-mode: strict
 
       - name: Run Tauri Build (Windows & Linux)
         if: matrix.platform != 'self-hosted'
@@ -89,7 +88,7 @@ jobs:
           tagName: dtb-kampfrichtereinsatzplaene-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
           releaseName: 'DTB Kampfrichtereinsatzpläne v__VERSION__'
           releaseBody: ${{ env.RELEASE_BODY }}
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
           args: ${{ matrix.args }}

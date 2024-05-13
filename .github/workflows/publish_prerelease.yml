@@ -5,8 +5,14 @@ on:
     branches:
       - pre-release
 
+# This workflow will trigger on each push to the `release` branch to create or update a GitHub release, build your app, and upload the artifacts to the release.
+
 jobs:
   publish-prerelease-images:
+    environment: Release
+    env:
+      TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+      TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
     permissions:
       contents: write
     strategy:
@@ -19,10 +25,9 @@ jobs:
             args: '--target x86_64-apple-darwin'
           # Deactivate Linux builds until further notice; the bundling does not work
           # - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
-            #  args: ''
-          # Deactivate Windows so we don't get billed
-          # - platform: 'windows-latest'
-            # args: ''
+          #  args: ''
+          - platform: 'windows-latest'
+            args: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -60,7 +65,6 @@ jobs:
         with:
           path: environment
           mode: production
-          load-mode: strict
 
       - name: Run Tauri Build (Windows & Linux)
         if: matrix.platform != 'self-hosted'
