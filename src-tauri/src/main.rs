@@ -10,7 +10,7 @@ use std::{env, thread};
 use std::fs::File;
 use std::panic::PanicInfo;
 use std::process::{abort, Command};
-use std::sync::atomic::{AtomicBool, AtomicI8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI8, Ordering, AtomicU64};
 use headless_chrome::{Browser, LaunchOptions};
 use headless_chrome::types::PrintToPdfOptions;
 use tauri::{AppHandle, Manager, Menu, MenuItem, RunEvent, State, UpdaterEvent, WindowBuilder};
@@ -47,6 +47,7 @@ static mut STDOUT_FILE: Option<String> = None;
 static mut STDERR_FILE: Option<String> = None;
 static mut MAINWINDOW_LOADED: AtomicBool = AtomicBool::new(false);
 static mut UPDATE_REQUESTED: AtomicI8 = AtomicI8::new(0);
+static mut UPDATE_PROGRESS: AtomicU64 = AtomicU64::new(0);
 
 #[tauri::command]
 fn update_mainwindow_loading_state(visible: bool) {
@@ -1396,6 +1397,10 @@ fn main() {
                                 // Update was cancelled, exit the loop
                                 return;
                             } else if UPDATE_REQUESTED.load(Ordering::Relaxed) == 1 {
+                                // Reset the progress (preventive)
+                                // SAFETY: We are using atomic operations only, so this is safe
+                                UPDATE_PROGRESS.store(0, Ordering::Relaxed);
+
                                 // Update was requested, start with it
                                 match update.download_and_install().await {
                                     Ok(()) => {},
@@ -1484,7 +1489,16 @@ fn main() {
                         }
                     }
                     UpdaterEvent::DownloadProgress { chunk_length, content_length } => {
-                        match app_handle.emit_to("mainUI", "updateHasProgress", UpdateProgressPayload{ chunk_len: chunk_length, content_len: content_length }) {
+                        // Get a temp value that we can increase
+                        // SAFETY: We are using atomic operations only, so this is safe
+                        let mut temp_progress;
+                       unsafe {
+                           temp_progress = UPDATE_PROGRESS.load(Ordering::Relaxed);
+                           temp_progress += chunk_length as u64;
+                           UPDATE_PROGRESS.store(temp_progress, Ordering::Relaxed);
+                       }
+
+                        match app_handle.emit_to("mainUI", "updateHasProgress", UpdateProgressPayload{ chunk_len: temp_progress as usize, content_len: content_length }) {
                             Ok(()) => {},
                             Err(err) => { eprintln!("Failed to emit updateHasProgress to frontend: {:?}", err); }
                         }
@@ -1534,7 +1548,7 @@ fn main() {
                 // don't receive the events
                 // SAFETY: This is safe, we are only accessing atomics
                 unsafe {
-                    while !crate::MAINWINDOW_LOADED.load(Ordering::Relaxed) {
+                    while !MAINWINDOW_LOADED.load(Ordering::Relaxed) {
                         sleep(std::time::Duration::from_millis(100)).await;
                     }
                 }
@@ -1545,13 +1559,17 @@ fn main() {
                         // We have to wait for an answer from the frontend
                         // SAFETY: We only use atomic operations, so this is safe
                         unsafe {
-                            while crate::UPDATE_REQUESTED.load(Ordering::Relaxed) == 0 {
+                            while UPDATE_REQUESTED.load(Ordering::Relaxed) == 0 {
                                 sleep(std::time::Duration::from_millis(100)).await;
                             }
-                            if crate::UPDATE_REQUESTED.load(Ordering::Relaxed) == -1 {
+                            if UPDATE_REQUESTED.load(Ordering::Relaxed) == -1 {
                                 // Update was cancelled, exit the loop
                                 return;
-                            } else if crate::UPDATE_REQUESTED.load(Ordering::Relaxed) == 1 {
+                            } else if UPDATE_REQUESTED.load(Ordering::Relaxed) == 1 {
+                                // Reset the progress (preventive)
+                                // SAFETY: We are using atomic operations only, so this is safe
+                                UPDATE_PROGRESS.store(0, Ordering::Relaxed);
+
                                 // Update was requested, start with it
                                 match update.download_and_install().await {
                                     Ok(()) => {},
@@ -1560,7 +1578,7 @@ fn main() {
                                     }
                                 }
                             } else {
-                                eprintln!("Unexpected atomic value of UPDATE_REQUESTED found: {:?}", crate::UPDATE_REQUESTED.load(Ordering::Relaxed));
+                                eprintln!("Unexpected atomic value of UPDATE_REQUESTED found: {:?}", UPDATE_REQUESTED.load(Ordering::Relaxed));
                             }
                         }
                     },
@@ -1626,7 +1644,6 @@ fn main() {
         .unwrap()
         .run(|app_handle, ev| match ev {
             RunEvent::Updater(update_event) => {
-                println!("Update event: {:?}", update_event);
                 match update_event {
                     UpdaterEvent::UpdateAvailable { body, date, version } => {
                         match app_handle.emit_to("mainUI", "updateIsAvailable", UpdateAvailablePayload{ body, date: date.unwrap().to_string(), version }) {
@@ -1641,7 +1658,16 @@ fn main() {
                         }
                     }
                     UpdaterEvent::DownloadProgress { chunk_length, content_length } => {
-                        match app_handle.emit_to("mainUI", "updateHasProgress", UpdateProgressPayload{ chunk_len: chunk_length, content_len: content_length }) {
+                        // Get a temp value that we can increase
+                        // SAFETY: We are using atomic operations only, so this is safe
+                        let mut temp_progress;
+                        unsafe {
+                            temp_progress = UPDATE_PROGRESS.load(Ordering::Relaxed);
+                            temp_progress += chunk_length as u64;
+                            UPDATE_PROGRESS.store(temp_progress, Ordering::Relaxed);
+                        }
+
+                        match app_handle.emit_to("mainUI", "updateHasProgress", UpdateProgressPayload{ chunk_len: temp_progress as usize, content_len: content_length }) {
                             Ok(()) => {},
                             Err(err) => { eprintln!("Failed to emit updateHasProgress to frontend: {:?}", err); }
                         }
