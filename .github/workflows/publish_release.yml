@@ -35,6 +35,14 @@ jobs:
         with:
           submodules: true
 
+      # REMOVE AFTER FIRST RUN!
+      - name: Clean up deployments
+        uses: strumwolf/delete-deployment-environment@v3.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment: Release
+          onlyRemoveDeployments: true
+
       - name: Install Node
         uses: actions/setup-node@v4
         with:
