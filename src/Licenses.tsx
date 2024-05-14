@@ -36,6 +36,7 @@ export default function Licenses() {
         MailBuilder = "https://github.com/stalwartlabs/mail-builder",
         Tokio = "https://github.com/tokio-rs/tokio",
         Marked = "https://github.com/markedjs/marked",
+        Markdown = "https://daringfireball.net/projects/markdown/",
     }
 
     // Theme thing :)
@@ -1649,7 +1650,7 @@ export default function Licenses() {
                             <div className={"description"}><p><b>Markdown</b></p><p>v1.0.1</p><p><i>(BSD-3-Clause)</i></p></div>
                             <div className={"filler"}/>
                             <Button appearance={"transparent"} icon={<FaGithub/>}
-                                    onClick={() => redirect(Repositories.Marked)}/></AccordionHeader>
+                                    onClick={() => redirect(Repositories.Markdown)}/></AccordionHeader>
                         <AccordionPanel>
                             <Card className={"panel"}>
                                 <div className={"licenseText"}>
