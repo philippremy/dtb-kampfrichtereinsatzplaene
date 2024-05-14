@@ -4,3 +4,6 @@
 [submodule "externals/create-dmg"]
 	path = externals/create-dmg
 	url = https://github.com/create-dmg/create-dmg.git
+[submodule "externals/md2string"]
+	path = externals/md2string
+	url = https://github.com/philippremy/md2string.git

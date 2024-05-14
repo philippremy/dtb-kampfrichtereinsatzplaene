@@ -9,6 +9,12 @@ on:
 
 jobs:
   publish-prerelease-images:
+    environment: Release
+    env:
+      TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+      TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+      MAIL_ADDRESS: ${{ secrets.MAIL_ADDRESS }}
+      MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
     permissions:
       contents: write
     strategy:
@@ -56,15 +62,23 @@ jobs:
       - name: Install .NET 8.0
         uses: actions/setup-dotnet@v4
 
+      - name: Load Environment Variables (Release Notes)
+        uses: xom9ikk/dotenv@v2
+        with:
+          path: environment
+          mode: production
+
       - name: Run Tauri Build (Windows & Linux)
         if: matrix.platform != 'self-hosted'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAIL_ADDRESS: ${{ secrets.MAIL_ADDRESS }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
         with:
           tagName: dtb-kampfrichtereinsatzplaene-pre-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
           releaseName: 'DTB Kampfrichtereinsatzpläne Prerelease v__VERSION__'
-          releaseBody: '[PRERELEASE] Use with caution and expect bugs, unimplemented functions and other stuff not working!'
+          releaseBody: ${{ env.RELEASE_BODY }}
           releaseDraft: true
           prerelease: true
           args: ${{ matrix.args }}
@@ -74,11 +88,14 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAIL_ADDRESS: ${{ secrets.MAIL_ADDRESS }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
         with:
           tauriScript: "npm run tauri-macos"
           tagName: dtb-kampfrichtereinsatzplaene-pre-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
           releaseName: 'DTB Kampfrichtereinsatzpläne Prerelease v__VERSION__'
-          releaseBody: '[PRERELEASE] Use with caution and expect bugs, unimplemented functions and other stuff not working!'
+          releaseBody: ${{ env.RELEASE_BODY }}
           releaseDraft: true
           prerelease: true
+          includeUpdaterJson: true
           args: ${{ matrix.args }}

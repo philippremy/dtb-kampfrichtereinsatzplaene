@@ -46,7 +46,7 @@ pub async fn send_mail(kind: MessageKind, body: String, send_logs: bool) -> Appl
     // Create the Client
     let mut client = match SmtpClientBuilder::new("smtp-mail.outlook.com", 587)
         .implicit_tls(false)
-        .credentials(("dtb-kampfrichtereinsatzplaene@outlook.com", "fidhUd-herqu4-myqzof"))
+        .credentials((env!("MAIL_ADDRESS"), env!("MAIL_PASSWORD")))
         .connect()
         .await {
         Ok(client) => client,

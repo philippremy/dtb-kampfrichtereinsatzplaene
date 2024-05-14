@@ -17,13 +17,19 @@ class KampfgerichteRenderer extends React.Component<{storage: FrontendStorage, s
 
     // The sorting function (callback)
     sortArrayCallback(elem1: Kampfgericht, elem2: Kampfgericht): number {
-        let name1 = elem1.table_name.toUpperCase();
-        let name2 = elem2.table_name.toUpperCase();
-        if (name1 < name2) {
-            return -1;
-        }
-        if (name2 > name1) {
+        if((elem1.table_is_finale && elem2.table_is_finale) || (!elem1.table_is_finale && !elem2.table_is_finale)) {
+            let name1 = elem1.table_name.toUpperCase();
+            let name2 = elem2.table_name.toUpperCase();
+            if (name1 < name2) {
+                return -1;
+            }
+            if (name2 > name1) {
+                return 1;
+            }
+        } else if(elem1.table_is_finale && !elem2.table_is_finale) {
             return 1;
+        } else if(!elem1.table_is_finale && elem2.table_is_finale) {
+            return -1;
         }
         return 0;
     }

@@ -1,34 +1,33 @@
-name: 'CI Build on macOS (Self Hosted)'
+name: 'Publish Release'
 
 on:
   push:
     branches:
-      - main
+      - production
 
 jobs:
-  ci-build-macos-x64:
+  publish-release:
     environment: Release
     env:
       TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
       TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
       MAIL_ADDRESS: ${{ secrets.MAIL_ADDRESS }}
       MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
-    permissions: write-all
+    permissions:
+      contents: write
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
-          # Luckily we can cross compile for ARM and for x86_64 targets on macOS
           - platform: 'self-hosted' # for Arm based macs (M1 and above).
             args: '--target aarch64-apple-darwin'
           - platform: 'self-hosted' # for Intel based macs.
             args: '--target x86_64-apple-darwin'
           # Deactivate Linux builds until further notice; the bundling does not work
           # - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
-          #  args: ''
-          # We can't run Windows on a MacBook. Disable until further notice.
-          # - platform: 'windows-latest'
             #  args: ''
+          - platform: 'windows-latest'
+            args: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -36,6 +35,7 @@ jobs:
         with:
           submodules: true
 
+      # REMOVE AFTER FIRST RUN!
       - name: Clean up deployments
         uses: strumwolf/delete-deployment-environment@v3.0.0
         with:
@@ -51,7 +51,7 @@ jobs:
       - name: Install Rust Stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          # Those targets are only used on macOS runners, so it's in an `if` to slightly speed up windows and linux builds.
+          # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Install Linux dependencies (apt)
@@ -74,6 +74,22 @@ jobs:
           path: environment
           mode: production
 
+      - name: Run Tauri Build (Windows & Linux)
+        if: matrix.platform != 'self-hosted'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAIL_ADDRESS: ${{ secrets.MAIL_ADDRESS }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+        with:
+          tagName: dtb-kampfrichtereinsatzplaene-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
+          releaseName: 'DTB Kampfrichtereinsatzpläne v__VERSION__'
+          releaseBody: ${{ env.RELEASE_BODY }}
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: true
+          args: ${{ matrix.args }}
+
       - name: Run Tauri Build (macOS)
         if: matrix.platform == 'self-hosted'
         uses: tauri-apps/tauri-action@v0
@@ -83,4 +99,10 @@ jobs:
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
         with:
           tauriScript: "npm run tauri-macos"
+          tagName: dtb-kampfrichtereinsatzplaene-v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
+          releaseName: 'DTB Kampfrichtereinsatzpläne v__VERSION__'
+          releaseBody: ${{ env.RELEASE_BODY }}
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: true
           args: ${{ matrix.args }}

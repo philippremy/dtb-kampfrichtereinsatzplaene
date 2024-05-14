@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { open } from '@tauri-apps/api/shell';
 import "./Licenses.css";
 import { FluentProvider, webLightTheme, webDarkTheme, Accordion, AccordionItem, AccordionHeader, Button, Divider, AccordionPanel, Card, Title3 } from "@fluentui/react-components";
-import { CalendarDateRegular, CodeFilled, FluentRegular, FolderListRegular, FolderSearchRegular, IconsRegular, NumberSymbolRegular, SettingsCogMultipleRegular, StoreMicrosoftRegular, TextAlignJustifyRegular, TextWholeWordRegular, WindowMultipleFilled, DocumentPdfRegular, CommentErrorRegular, WindowConsoleRegular, ArchiveRegular, PlugConnectedCheckmarkRegular, GlobeRegular, PipelineRegular, NumberRowRegular, PersonFeedbackRegular, MailEditRegular, PersonRunningRegular } from "@fluentui/react-icons";
+import { CalendarDateRegular, CodeFilled, FluentRegular, FolderListRegular, FolderSearchRegular, IconsRegular, NumberSymbolRegular, SettingsCogMultipleRegular, StoreMicrosoftRegular, TextAlignJustifyRegular, TextWholeWordRegular, WindowMultipleFilled, DocumentPdfRegular, CommentErrorRegular, WindowConsoleRegular, ArchiveRegular, PlugConnectedCheckmarkRegular, GlobeRegular, PipelineRegular, NumberRowRegular, PersonFeedbackRegular, MailEditRegular, PersonRunningRegular, ReadingListFilled, MarkdownFilled } from "@fluentui/react-icons";
 import { FaGithub, FaFontAwesomeAlt } from "react-icons/fa";
 
 export default function Licenses() {
@@ -35,6 +35,8 @@ export default function Licenses() {
         MailSend = "https://github.com/stalwartlabs/mail-send",
         MailBuilder = "https://github.com/stalwartlabs/mail-builder",
         Tokio = "https://github.com/tokio-rs/tokio",
+        Marked = "https://github.com/markedjs/marked",
+        Markdown = "https://daringfireball.net/projects/markdown/",
     }
 
     // Theme thing :)
@@ -1603,6 +1605,87 @@ export default function Licenses() {
                                     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
                                     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
                                     SOFTWARE.
+                                </div>
+                            </Card>
+                        </AccordionPanel>
+                        <Divider inset={true}/>
+                    </AccordionItem>
+                    <AccordionItem value={"marked"}>
+                        <AccordionHeader button={<Button appearance={"outline"}/>} icon={<ReadingListFilled/>}>
+                            <div className={"description"}><p><b>marked</b></p><p>v12.0.2</p><p><i>(MIT)</i></p></div>
+                            <div className={"filler"}/>
+                            <Button appearance={"transparent"} icon={<FaGithub/>}
+                                    onClick={() => redirect(Repositories.Marked)}/></AccordionHeader>
+                        <AccordionPanel>
+                            <Card className={"panel"}>
+                                <div className={"licenseText"}>
+                                    <b>MIT License</b>
+                                    <br/><br/>
+                                    Copyright (c) 2018+, MarkedJS (<a href={"https://github.com/markedjs/"}>https://github.com/markedjs/</a>) Copyright (c) 2011-2018, Christopher Jeffrey (<a href={"https://github.com/chjj/"}>https://github.com/chjj/</a>).
+                                    <br/><br/>
+                                    Permission is hereby granted, free of charge, to any person obtaining a copy
+                                    of this software and associated documentation files (the "Software"), to deal
+                                    in the Software without restriction, including without limitation the rights
+                                    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                                    copies of the Software, and to permit persons to whom the Software is
+                                    furnished to do so, subject to the following conditions:
+                                    <br/><br/>
+                                    The above copyright notice and this permission notice shall be included in all
+                                    copies or substantial portions of the Software.
+                                    <br/><br/>
+                                    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+                                    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                                    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                                    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                                    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+                                    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+                                    SOFTWARE.
+                                </div>
+                            </Card>
+                        </AccordionPanel>
+                        <Divider inset={true}/>
+                    </AccordionItem>
+                    <AccordionItem value={"markdown"}>
+                        <AccordionHeader button={<Button appearance={"outline"}/>} icon={<MarkdownFilled/>}>
+                            <div className={"description"}><p><b>Markdown</b></p><p>v1.0.1</p><p><i>(BSD-3-Clause)</i></p></div>
+                            <div className={"filler"}/>
+                            <Button appearance={"transparent"} icon={<FaGithub/>}
+                                    onClick={() => redirect(Repositories.Markdown)}/></AccordionHeader>
+                        <AccordionPanel>
+                            <Card className={"panel"}>
+                                <div className={"licenseText"}>
+                                    <b>BSD-3-Clause License</b>
+                                    <br/><br/>
+                                    Copyright © 2004, John Gruber.
+                                    <br/><br/>
+                                    <a href={"http://daringfireball.net/"}>http://daringfireball.net/</a>
+                                    <br/><br/>
+                                    All rights reserved.
+                                    <br/><br/>
+                                    Redistribution and use in source and binary forms, with or without modification, are
+                                    permitted provided that the following conditions are met:
+                                    <br/><br/>
+                                    - Redistributions of source code must retain the above copyright notice, this list
+                                    of conditions and the following disclaimer.
+                                    <br/><br/>
+                                    - Redistributions in binary form must reproduce the above copyright notice, this
+                                    list of conditions and the following disclaimer in the documentation and/or other
+                                    materials provided with the distribution.
+                                    <br/><br/>
+                                    - Neither the name “Markdown” nor the names of its contributors may be used to
+                                    endorse or promote products derived from this software without specific prior
+                                    written permission.
+                                    <br/><br/>
+                                    This software is provided by the copyright holders and contributors “as is” and any
+                                    express or implied warranties, including, but not limited to, the implied warranties
+                                    of merchantability and fitness for a particular purpose are disclaimed. In no event
+                                    shall the copyright owner or contributors be liable for any direct, indirect,
+                                    incidental, special, exemplary, or consequential damages (including, but not limited
+                                    to, procurement of substitute goods or services; loss of use, data, or profits; or
+                                    business interruption) however caused and on any theory of liability, whether in
+                                    contract, strict liability, or tort (including negligence or otherwise) arising in
+                                    any way out of the use of this software, even if advised of the possibility of such
+                                    damage.
                                 </div>
                             </Card>
                         </AccordionPanel>

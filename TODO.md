@@ -19,10 +19,10 @@
 - [x] Update the error logging in the backend library
 - [x] Implement an automatic build number incrementer
 - [x] Fix theme and DTB logo color bugs
-- [ ] Sort tables in Editor following a pattern of nonfinal --> A-Z --> final --> A-Z
+- [x] Sort tables in Editor following a pattern of nonfinal --> A-Z --> final --> A-Z
+- [x] Build an updater (in app)
 
 ### To-Do's for 1.1.0
-- [ ] Build an updater (in app)
 - [ ] Implement missing menus
 - [ ] Refactor frontend syncing, so we don't have x million loc for the same thing. Makes compiling slow and we could just #[inline(always)] this
 
