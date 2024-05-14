@@ -117,6 +117,8 @@ function App() {
         setProgressLabel("Ein Fehler ist aufgetreten: " + event.payload);
         setValidationState("error");
         setProgressBarColor("error");
+        setUpdateButtonText("Schließen");
+        setUpdaterButtonsDisabled(false);
       }),
     );
 
