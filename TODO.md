@@ -30,7 +30,10 @@
 ### To-Do's for 1.1.0
 - [ ] Implement missing menus
 - [ ] Refactor frontend syncing, so we don't have x million loc for the same thing. Makes compiling slow and we could just #[inline(always)] this
+- [ ] Generate Menus using a function --> Reduce loc
 - [ ] Create algorithm for inserting Judges based on an exported list from GymNet
+- [ ] Implement Copy, Cut and Paste functionality in WebView contexts
+- [ ] Implement custom About menu using a WebView window --> Enables this functionality on Windows
 
 ### Possible, but not planned as of now
 - [ ] Implement a sanitizing algorithm which sanitizes all templates (i.e., makes sure that all Text is in one Run)
