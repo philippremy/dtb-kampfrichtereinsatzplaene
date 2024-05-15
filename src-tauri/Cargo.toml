@@ -1,6 +1,6 @@
 [package]
 name = "dtb-kampfrichtereinsatzplaene"
-version = "1.0.0"
+version = "1.0.1-rc-0"
 description = "Eine App zum Erstellen von Kampfrichtereinsatzplänen für Rhönradwettkämpfe des DTB"
 authors = ["Philipp Remy <philipp.remy@dtb.de>"]
 license = "GPL-3.0-only"

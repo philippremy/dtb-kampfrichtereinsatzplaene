@@ -75,16 +75,16 @@ export default class BugReporter extends React.Component<{}, {isLight: boolean, 
                   <Body1Strong>E-Mail an die Entwickler senden:</Body1Strong>
                   <Divider inset={true} id="divider" />
                   <Field label={"Name:"} >
-                    <Input type="text" placeholder="Vorname Nachname" onInput={(ev) => this.setState({name: ev.currentTarget.value})} contentBefore={<LaptopPersonFilled />} />  
+                    <Input type="text" placeholder="Vorname Nachname" onInput={(ev) => this.setState({name: ev.currentTarget.value})} contentBefore={<LaptopPersonFilled />} autoCapitalize={"off"} autoCorrect={"off"} />
                   </Field>
                   <Field label={"E-Mail:"}>
-                    <Input type="email" placeholder="person@domain.de" onInput={(ev) => this.setState({mail: ev.currentTarget.value})} contentBefore={<MailboxFilled />} />  
+                    <Input type="email" placeholder="person@domain.de" onInput={(ev) => this.setState({mail: ev.currentTarget.value})} contentBefore={<MailboxFilled />} autoCapitalize={"off"} autoCorrect={"off"} />
                   </Field>
                   <Field label={"Betreff:"} required={true} >
-                    <Input type="text" placeholder="BUG/FEEDBACK/SUPPORT für..." onInput={(ev) => this.setState({subject: ev.currentTarget.value})} contentBefore={<TargetFilled />} />  
+                    <Input type="text" placeholder="BUG/FEEDBACK/SUPPORT für..." onInput={(ev) => this.setState({subject: ev.currentTarget.value})} contentBefore={<TargetFilled />} autoCapitalize={"off"} autoCorrect={"off"} />
                   </Field>
                   <Field label={"Nachricht:"} id="nachrichtField" required={true} >
-                    <Textarea placeholder="Mir ist Folgendes aufgefallen: [...]" id="nachricht" resize="none" onInput={(ev) => this.setState({message: ev.currentTarget.value})} />
+                    <Textarea placeholder="Mir ist Folgendes aufgefallen: [...]" id="nachricht" resize="none" onInput={(ev) => this.setState({message: ev.currentTarget.value})} autoCapitalize={"off"} autoCorrect={"off"} />
                   </Field>
                   <Checkbox label={"Logs mitsenden?"} defaultChecked={this.state.sendLogs} onChange={(_ev, data) => this.setState({sendLogs: data.checked as boolean})} />
                   <div id="buttonDiv">

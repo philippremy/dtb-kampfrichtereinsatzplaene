@@ -22,9 +22,15 @@
 - [x] Sort tables in Editor following a pattern of nonfinal --> A-Z --> final --> A-Z
 - [x] Build an updater (in app)
 
+### To-Do's for 1.0.1
+- [x] Fix Chromium Downloader --> When we are checking, we should *not* allow any downloads! We *ask*!
+- [x] Disable AutoCorrection in Input fields
+- [x] Create custom environments for pre-release and debug builds in GitHub Actions
+
 ### To-Do's for 1.1.0
 - [ ] Implement missing menus
 - [ ] Refactor frontend syncing, so we don't have x million loc for the same thing. Makes compiling slow and we could just #[inline(always)] this
+- [ ] Create algorithm for inserting Judges based on an exported list from GymNet
 
 ### Possible, but not planned as of now
 - [ ] Implement a sanitizing algorithm which sanitizes all templates (i.e., makes sure that all Text is in one Run)

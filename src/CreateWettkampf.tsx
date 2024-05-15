@@ -161,10 +161,10 @@ function CreateWettkampf() {
         </div>
         <div id="formContainer">
           <Field label={"Wettkampfname"} validationState={nameState} validationMessage={nameValidationMessage} required={true} className="wkField">
-            <Input id={nameInput} onInput={(data) => validateFormInput(data)} contentBefore={<TrophyFilled></TrophyFilled>} />
+            <Input id={nameInput} onInput={(data) => validateFormInput(data)} contentBefore={<TrophyFilled></TrophyFilled>} autoCapitalize={"off"} autoCorrect={"off"} />
           </Field>
           <Field label={"Wettkampfort"} validationState={placeState} validationMessage={placeValidationMessage} required={true} className="wkField">
-            <Input id={placeInput} onInput={(data) => validateFormInput(data)} contentBefore={<PinFilled></PinFilled>} />
+            <Input id={placeInput} onInput={(data) => validateFormInput(data)} contentBefore={<PinFilled></PinFilled>} autoCapitalize={"off"} autoCorrect={"off"} />
           </Field>
           <Field label={"Wettkampfdatum"} validationState={dateState} validationMessage={dateValidationMessage} required={true} className="wkField">
             <Input id={dateInput} type="date" placeholder="" onInput={(data) => validateFormInput(data)} contentBefore={<CalendarFilled></CalendarFilled>} />
@@ -173,7 +173,7 @@ function CreateWettkampf() {
             <Input id={timeInput} type="time" placeholder="" onInput={(data) => validateFormInput(data)} contentBefore={<TimePickerFilled></TimePickerFilled>} />
           </Field>
           <Field label={"Kampfrichterbeauftragte*r"} validationState={personState} validationMessage={personValidationMessage} required={true} className="wkField">
-            <Input id={responsiblePersonInput} onInput={(data) => validateFormInput(data)} contentBefore={<PersonFilled></PersonFilled>} />
+            <Input id={responsiblePersonInput} onInput={(data) => validateFormInput(data)} contentBefore={<PersonFilled></PersonFilled>} autoCapitalize={"off"} autoCorrect={"off"} />
           </Field>
         </div>
         <div id="confirmButtonDiv">

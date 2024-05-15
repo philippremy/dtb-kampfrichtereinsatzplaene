@@ -194,37 +194,37 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
                 return(
                     <div className="fieldContainer">
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("ok") ? this.dataSelf.judges.get("ok")!.name : ""} contentBefore={"OK"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ok")} className="inputType" id="ok" />
+                            <Input defaultValue={this.dataSelf.judges.get("ok") ? this.dataSelf.judges.get("ok")!.name : ""} contentBefore={"OK"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ok")} className="inputType" id="ok" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("sk1") ? this.dataSelf.judges.get("sk1")!.name : ""} contentBefore={"SK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk1")} className="inputType" id="sk1" />
+                            <Input defaultValue={this.dataSelf.judges.get("sk1") ? this.dataSelf.judges.get("sk1")!.name : ""} contentBefore={"SK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk1")} className="inputType" id="sk1" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("sk2") ? this.dataSelf.judges.get("sk2")!.name : ""} contentBefore={"SK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk2")} className="inputType" id="sk2" />
+                            <Input defaultValue={this.dataSelf.judges.get("sk2") ? this.dataSelf.judges.get("sk2")!.name : ""} contentBefore={"SK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk2")} className="inputType" id="sk2" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("ak1") ? this.dataSelf.judges.get("ak1")!.name : ""} contentBefore={"AK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak1")} className="inputType" id="ak1" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak1") ? this.dataSelf.judges.get("ak1")!.name : ""} contentBefore={"AK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak1")} className="inputType" id="ak1" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("ak2") ? this.dataSelf.judges.get("ak2")!.name : ""} contentBefore={"AK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak2")} className="inputType" id="ak2" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak2") ? this.dataSelf.judges.get("ak2")!.name : ""} contentBefore={"AK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak2")} className="inputType" id="ak2" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("ak3") ? this.dataSelf.judges.get("ak3")!.name : ""} contentBefore={"AK3"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak3")} className="inputType" id="ak3" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak3") ? this.dataSelf.judges.get("ak3")!.name : ""} contentBefore={"AK3"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak3")} className="inputType" id="ak3" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("ak4") ? this.dataSelf.judges.get("ak4")!.name : ""} contentBefore={"AK4"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak4")} className="inputType" id="ak4" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak4") ? this.dataSelf.judges.get("ak4")!.name : ""} contentBefore={"AK4"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak4")} className="inputType" id="ak4" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("aik1") ? this.dataSelf.judges.get("aik1")!.name : ""} contentBefore={"AIK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik1")} className="inputType" id="aik1" />
+                            <Input defaultValue={this.dataSelf.judges.get("aik1") ? this.dataSelf.judges.get("aik1")!.name : ""} contentBefore={"AIK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik1")} className="inputType" id="aik1" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("aik2") ? this.dataSelf.judges.get("aik2")!.name : ""} contentBefore={"AIK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik2")} className="inputType" id="aik2" />
+                            <Input defaultValue={this.dataSelf.judges.get("aik2") ? this.dataSelf.judges.get("aik2")!.name : ""} contentBefore={"AIK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik2")} className="inputType" id="aik2" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("aik3") ? this.dataSelf.judges.get("aik3")!.name : ""} contentBefore={"AIK3"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik3")} className="inputType" id="aik3" />
+                            <Input defaultValue={this.dataSelf.judges.get("aik3") ? this.dataSelf.judges.get("aik3")!.name : ""} contentBefore={"AIK3"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik3")} className="inputType" id="aik3" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("aik4") ? this.dataSelf.judges.get("aik4")!.name : ""} contentBefore={"AIK4"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik4")} className="inputType" id="aik4" />
+                            <Input defaultValue={this.dataSelf.judges.get("aik4") ? this.dataSelf.judges.get("aik4")!.name : ""} contentBefore={"AIK4"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("aik4")} className="inputType" id="aik4" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                     </div>
                 );
@@ -232,25 +232,25 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
                 return(
                     <div className="fieldContainer">
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("ok") ? this.dataSelf.judges.get("ok")!.name : ""} contentBefore={"OK"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ok")} className="inputType" id="ok" />
+                            <Input defaultValue={this.dataSelf.judges.get("ok") ? this.dataSelf.judges.get("ok")!.name : ""} contentBefore={"OK"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ok")} className="inputType" id="ok" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("sk1") ? this.dataSelf.judges.get("sk1")!.name : ""} contentBefore={"SK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk1")} className="inputType" id="sk1" />
+                            <Input defaultValue={this.dataSelf.judges.get("sk1") ? this.dataSelf.judges.get("sk1")!.name : ""} contentBefore={"SK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk1")} className="inputType" id="sk1" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("sk2") ? this.dataSelf.judges.get("sk2")!.name : ""} contentBefore={"SK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk2")} className="inputType" id="sk2" />
+                            <Input defaultValue={this.dataSelf.judges.get("sk2") ? this.dataSelf.judges.get("sk2")!.name : ""} contentBefore={"SK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("sk2")} className="inputType" id="sk2" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("ak1") ? this.dataSelf.judges.get("ak1")!.name : ""} contentBefore={"AK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak1")} className="inputType" id="ak1" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak1") ? this.dataSelf.judges.get("ak1")!.name : ""} contentBefore={"AK1"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak1")} className="inputType" id="ak1" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("ak2") ? this.dataSelf.judges.get("ak2")!.name : ""} contentBefore={"AK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak2")} className="inputType" id="ak2" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak2") ? this.dataSelf.judges.get("ak2")!.name : ""} contentBefore={"AK2"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak2")} className="inputType" id="ak2" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("ak3") ? this.dataSelf.judges.get("ak3")!.name : ""} contentBefore={"AK3"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak3")} className="inputType" id="ak3" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak3") ? this.dataSelf.judges.get("ak3")!.name : ""} contentBefore={"AK3"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak3")} className="inputType" id="ak3" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                         <Field>
-                            <Input defaultValue={this.dataSelf.judges.get("ak4") ? this.dataSelf.judges.get("ak4")!.name : ""} contentBefore={"AK4"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak4")} className="inputType" id="ak4" />
+                            <Input defaultValue={this.dataSelf.judges.get("ak4") ? this.dataSelf.judges.get("ak4")!.name : ""} contentBefore={"AK4"} onInput={(data) => this.updateValues(data)} contentAfter={this.setIcon("ak4")} className="inputType" id="ak4" autoCapitalize={"off"} autoCorrect={"off"} />
                         </Field>
                     </div>
                 );
@@ -381,7 +381,7 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
                         <DialogContent>
                             <div className="tableDialogContainer">
                                 <Field label={"Name des Kampfgerichts"} required={true}>
-                                    <Input defaultValue={this.dataSelf.table_name} placeholder={this.dataSelf.table_name} onInput={(data) => this.setState({tableName: data.currentTarget.value})} />
+                                    <Input defaultValue={this.dataSelf.table_name} placeholder={this.dataSelf.table_name} onInput={(data) => this.setState({tableName: data.currentTarget.value})} autoCapitalize={"off"} autoCorrect={"off"} />
                                 </Field>
                                 <Field label={"Disziplin"} required={true}>
                                     <Combobox placeholder={this.dataSelf.table_kind} defaultValue={this.dataSelf.table_kind} onOptionSelect={(_ev, data) => this.setState({tableDiscipline: data.optionText})}>
