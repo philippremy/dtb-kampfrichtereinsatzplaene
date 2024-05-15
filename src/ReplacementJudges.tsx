@@ -105,7 +105,7 @@ export default class ReplacementJudges extends React.Component<{storage: Fronten
                                         return(
                                             <Field>
                                                 <Input aria-label={name} contentBefore={noOfReplacementJudges.toString() + "."} defaultValue={name} className="inputTypeReplacement" onInput={(element) => {this.reactToInputChange(element)}} contentAfter={
-                                                    <Button aria-label={name} icon={<DeleteRegular />} appearance={"transparent"} size={"small"} onClick={(element) => {this.removeCurrent(element)}} />
+                                                    <Button aria-label={name} icon={<DeleteRegular />} appearance={"transparent"} size={"small"} onClick={(element) => {this.removeCurrent(element)}} autoCapitalize={"off"} autoCorrect={"off"} />
                                                 }></Input>
                                             </Field>
                                         )

@@ -579,7 +579,7 @@ function Editor() {
                         <DialogTitle>Namen für das Kampfgericht vergeben</DialogTitle>
                         <DialogContent>
                             <Field label={"Name des Kampfgerichts"} required={true}>
-                                <Input onInput={(data) => setNameToCreate(data.currentTarget.value)} />
+                                <Input onInput={(data) => setNameToCreate(data.currentTarget.value)} autoCapitalize={"off"} autoCorrect={"off"} />
                             </Field>
                         </DialogContent>
                         <DialogActions>
@@ -597,10 +597,10 @@ function Editor() {
                         <DialogTitle>Wettkampfdaten ändern</DialogTitle>
                         <DialogContent>
                             <Field label={"Name des Wettkampfs"} required={true}>
-                                <Input id={nameInput} defaultValue={frontendStorage.wk_name} contentBefore={<TrophyFilled></TrophyFilled>} />
+                                <Input id={nameInput} defaultValue={frontendStorage.wk_name} contentBefore={<TrophyFilled></TrophyFilled>} autoCapitalize={"off"} autoCorrect={"off"} />
                             </Field>
                             <Field label={"Ort des Wettkampfs"} required={true}>
-                                <Input id={placeInput} defaultValue={frontendStorage.wk_place} contentBefore={<PinFilled></PinFilled>} />
+                                <Input id={placeInput} defaultValue={frontendStorage.wk_place} contentBefore={<PinFilled></PinFilled>} autoCapitalize={"off"} autoCorrect={"off"} />
                             </Field>
                             <Field label={"Datum des Wettkampfs"} required={true}>
                                 <Input id={dateInput} defaultValue={frontendStorage.wk_date} type={"date"} contentBefore={<CalendarFilled></CalendarFilled>} />
@@ -609,7 +609,7 @@ function Editor() {
                                 <Input id={timeInput} defaultValue={frontendStorage.wk_judgesmeeting_time} type={"time"} contentBefore={<TimePickerFilled></TimePickerFilled>} />
                             </Field>
                             <Field label={"Kampfrichterbeauftragte*r"} required={true}>
-                                <Input id={responsiblePersonInput} defaultValue={frontendStorage.wk_responsible_person} contentBefore={<PersonFilled></PersonFilled>} />
+                                <Input id={responsiblePersonInput} defaultValue={frontendStorage.wk_responsible_person} contentBefore={<PersonFilled></PersonFilled>} autoCapitalize={"off"} autoCorrect={"off"} />
                             </Field>
                         </DialogContent>
                         <DialogActions>

@@ -9,7 +9,7 @@ on:
 
 jobs:
   publish-prerelease-images:
-    environment: Release
+    environment: Pre-Release
     env:
       TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
       TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
@@ -27,7 +27,7 @@ jobs:
             args: '--target x86_64-apple-darwin'
           # Deactivate Linux builds until further notice; the bundling does not work
           # - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
-          #  args: ''
+            #  args: ''
           - platform: 'windows-latest'
             args: ''
 

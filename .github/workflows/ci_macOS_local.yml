@@ -7,7 +7,7 @@ on:
 
 jobs:
   ci-build-macos-x64:
-    environment: Release
+    environment: Debug
     env:
       TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
       TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
@@ -40,7 +40,7 @@ jobs:
         uses: strumwolf/delete-deployment-environment@v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          environment: Release
+          environment: Debug
           onlyRemoveDeployments: true
 
       - name: Install Node
