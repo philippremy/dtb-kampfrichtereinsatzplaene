@@ -28,6 +28,9 @@
 - [x] Create custom environments for pre-release and debug builds in GitHub Actions
 
 ### To-Do's for 1.1.0
+- [x] Add Cyr Wheel Judging Tables
+
+### To-Do's for 1.X.0
 - [ ] Implement missing menus
 - [ ] Refactor frontend syncing, so we don't have x million loc for the same thing. Makes compiling slow and we could just #[inline(always)] this
 - [ ] Generate Menus using a function --> Reduce loc

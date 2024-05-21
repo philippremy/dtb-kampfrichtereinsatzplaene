@@ -1,7 +1,7 @@
 import React from "react";
 import { FrontendStorage, Kampfgericht } from "./Editor";
 import "./Kampfgericht.css"
-import { Body1Stronger, Button, Caption1, Card, CardFooter, CardHeader, Checkbox, CheckboxOnChangeData, Combobox, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, Input, Option } from "@fluentui/react-components";
+import { Body1Stronger, Button, Caption1, Card, CardFooter, CardHeader, Checkbox, CheckboxOnChangeData, Combobox, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, Input, Option, Divider } from "@fluentui/react-components";
 import { CheckmarkFilled, PenFilled, WarningFilled } from "@fluentui/react-icons";
 
 interface StateType {
@@ -190,6 +190,7 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
     matchTypeAndGetElements() {
 
         switch (this.dataSelf.table_kind) {
+            case "Artistisches Programm":
             case "Geradeturnen auf Musik":
                 return(
                     <div className="fieldContainer">
@@ -385,10 +386,17 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
                                 </Field>
                                 <Field label={"Disziplin"} required={true}>
                                     <Combobox placeholder={this.dataSelf.table_kind} defaultValue={this.dataSelf.table_kind} onOptionSelect={(_ev, data) => this.setState({tableDiscipline: data.optionText})}>
+                                        <Option disabled={true}>Rhönradturnen</Option>
+                                        <Divider inset={true} />
                                         <Option>Geradeturnen auf Musik</Option>
                                         <Option>Geradeturnen ohne Musik</Option>
                                         <Option>Spiraleturnen</Option>
                                         <Option>Sprung</Option>
+                                        <Divider inset={true} />
+                                        <Option disabled={true}>Cyr Wheel</Option>
+                                        <Divider inset={true} />
+                                        <Option>Artistisches Programm</Option>
+                                        <Option>Technisches Programm</Option>
                                     </Combobox>
                                 </Field>
                             </div>

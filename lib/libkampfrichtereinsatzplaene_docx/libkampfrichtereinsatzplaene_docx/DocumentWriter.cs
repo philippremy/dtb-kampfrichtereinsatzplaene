@@ -637,7 +637,7 @@ public class TableHandler
         }
         
         // We can safely assume that the last four rows can be deleted, if this is not a Kampfgericht mit Geradeturnen auf Musik as type
-        if (kampfgericht.table_kind != "Geradeturnen auf Musik")
+        if (kampfgericht.table_kind != "Geradeturnen auf Musik" && kampfgericht.table_kind != "Artistisches Programm")
         {
             var rows = table.Descendants<TableRow>().ToList();
             // There is a spacing row in between, we don't want this removed!
@@ -758,7 +758,7 @@ public class TableHandler
                 // We need to be careful and only print these if we need to!
                 case "AIK1.1:":
                     cell.Elements<Paragraph>().First().RemoveAllChildren<Run>();
-                    if (kampfgericht.table_kind == "Geradeturnen auf Musik")
+                    if (kampfgericht.table_kind == "Geradeturnen auf Musik" || kampfgericht.table_kind == "Artistisches Programm")
                     {
                         cell.Elements<Paragraph>().First().AppendChild(new Run(new Text("AIK1:")));
                     }
@@ -769,7 +769,7 @@ public class TableHandler
                     break;
                 case "AIK1.2:":
                     cell.Elements<Paragraph>().First().RemoveAllChildren<Run>();
-                    if (kampfgericht.table_kind == "Geradeturnen auf Musik")
+                    if (kampfgericht.table_kind == "Geradeturnen auf Musik" || kampfgericht.table_kind == "Artistisches Programm")
                     {
                         cell.Elements<Paragraph>().First().AppendChild(new Run(new Text("AIK2:")));
                     }
@@ -780,7 +780,7 @@ public class TableHandler
                     break;
                 case "AIK1.3:":
                     cell.Elements<Paragraph>().First().RemoveAllChildren<Run>();
-                    if (kampfgericht.table_kind == "Geradeturnen auf Musik")
+                    if (kampfgericht.table_kind == "Geradeturnen auf Musik" || kampfgericht.table_kind == "Artistisches Programm")
                     {
                         cell.Elements<Paragraph>().First().AppendChild(new Run(new Text("AIK3:")));
                     }
@@ -791,7 +791,7 @@ public class TableHandler
                     break;
                 case "AIK1.4:":
                     cell.Elements<Paragraph>().First().RemoveAllChildren<Run>();
-                    if (kampfgericht.table_kind == "Geradeturnen auf Musik")
+                    if (kampfgericht.table_kind == "Geradeturnen auf Musik" || kampfgericht.table_kind == "Artistisches Programm")
                     {
                         cell.Elements<Paragraph>().First().AppendChild(new Run(new Text("AIK4:")));
                     }
@@ -895,7 +895,7 @@ public class TableHandler
                 // Same again here. Careful if we really need this.
                 case "AIK2.1:":
                     cell.Elements<Paragraph>().First().RemoveAllChildren<Run>();
-                    if (kampfgericht2.table_kind == "Geradeturnen auf Musik")
+                    if (kampfgericht2.table_kind == "Geradeturnen auf Musik" || kampfgericht2.table_kind == "Artistisches Programm")
                     {
                         cell.Elements<Paragraph>().First().AppendChild(new Run(new Text("AIK1:")));
                     }
@@ -906,7 +906,7 @@ public class TableHandler
                     break;
                 case "AIK2.2:":
                     cell.Elements<Paragraph>().First().RemoveAllChildren<Run>();
-                    if (kampfgericht2.table_kind == "Geradeturnen auf Musik")
+                    if (kampfgericht2.table_kind == "Geradeturnen auf Musik" || kampfgericht2.table_kind == "Artistisches Programm")
                     {
                         cell.Elements<Paragraph>().First().AppendChild(new Run(new Text("AIK2:")));
                     }
@@ -917,7 +917,7 @@ public class TableHandler
                     break;
                 case "AIK2.3:":
                     cell.Elements<Paragraph>().First().RemoveAllChildren<Run>();
-                    if (kampfgericht2.table_kind == "Geradeturnen auf Musik")
+                    if (kampfgericht2.table_kind == "Geradeturnen auf Musik" || kampfgericht2.table_kind == "Artistisches Programm")
                     {
                         cell.Elements<Paragraph>().First().AppendChild(new Run(new Text("AIK3:")));
                     }
@@ -928,7 +928,7 @@ public class TableHandler
                     break;
                 case "AIK2.4:":
                     cell.Elements<Paragraph>().First().RemoveAllChildren<Run>();
-                    if (kampfgericht2.table_kind == "Geradeturnen auf Musik")
+                    if (kampfgericht2.table_kind == "Geradeturnen auf Musik" || kampfgericht2.table_kind == "Artistisches Programm")
                     {
                         cell.Elements<Paragraph>().First().AppendChild(new Run(new Text("AIK4:")));
                     }
@@ -941,7 +941,7 @@ public class TableHandler
         }
         
         // We can safely assume that the last four rows can be deleted, if both are not a Kampfgericht mit Geradeturnen auf Musik as type
-        if (kampfgericht.table_kind != "Geradeturnen auf Musik" && kampfgericht2.table_kind != "Geradeturnen auf Musik")
+        if ((kampfgericht.table_kind != "Geradeturnen auf Musik" && kampfgericht2.table_kind != "Geradeturnen auf Musik") && (kampfgericht.table_kind != "Artistisches Programm" && kampfgericht2.table_kind != "Artistisches Programm"))
         {
             var rows = table.Descendants<TableRow>().ToList();
             // There is a spacing row in between, we don't want this removed!
