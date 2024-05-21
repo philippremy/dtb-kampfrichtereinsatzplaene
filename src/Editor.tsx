@@ -1,4 +1,4 @@
-import { Button, Caption2, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, FluentProvider, Input, Link, Menu, MenuButton, MenuButtonProps, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, SplitButton, Subtitle2, Text, Toast, ToastBody, Toaster, ToastFooter, ToastIntent, ToastTitle, ToastTrigger, useToastController, webDarkTheme, webLightTheme, Tooltip } from "@fluentui/react-components";
+import { Button, Caption2, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, FluentProvider, Input, Link, Menu, MenuButton, MenuButtonProps, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, SplitButton, Subtitle2, Text, Toast, ToastBody, Toaster, ToastFooter, ToastIntent, ToastTitle, ToastTrigger, useToastController, webDarkTheme, webLightTheme, Tooltip, Divider } from "@fluentui/react-components";
 import { AddFilled, CalendarFilled, CheckmarkFilled, ChevronDownRegular, DocumentFilled, ErrorCircleFilled, PenFilled, PersonFilled, PinFilled, SaveFilled, TimePickerFilled, TrophyFilled } from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api";
 import React, { useEffect, useId, useState } from "react";
@@ -564,10 +564,18 @@ function Editor() {
                 </MenuTrigger>
                 <MenuPopover>
                     <MenuList>
+                        <MenuItem disabled={true}>Rhönradturnen</MenuItem>
+                        <Divider />
                         <MenuItem onClick={() => {setKindToCreate("Geradeturnen ohne Musik"); setOpen(true)}}>Geradeturnen ohne Musik</MenuItem>
                         <MenuItem onClick={() => {setKindToCreate("Geradeturnen auf Musik"); setOpen(true)}}>Geradeturnen auf Musik</MenuItem>
                         <MenuItem onClick={() => {setKindToCreate("Spiraleturnen"); setOpen(true)}}>Spiraleturnen</MenuItem>
                         <MenuItem onClick={() => {setKindToCreate("Sprung"); setOpen(true)}}>Sprung</MenuItem>
+                        <Divider />
+                        <MenuItem disabled={true}>Cyr Wheel</MenuItem>
+                        <Divider />
+                        <MenuItem onClick={() => {setKindToCreate("Artistisches Programm"); setOpen(true)}}>Artistisches Programm</MenuItem>
+                        <MenuItem onClick={() => {setKindToCreate("Technisches Programm"); setOpen(true)}}>Technisches Programm</MenuItem>
+                        <Divider />
                         <MenuItem onClick={() => {setEditorExists(true)}} disabled={editorExists}>Ersatzkampfrichter</MenuItem>
                         { /* <MenuItem onClick={() => {setKindToCreate("Leer"); setOpen(true)}}>Leer</MenuItem> */ }
                     </MenuList>
