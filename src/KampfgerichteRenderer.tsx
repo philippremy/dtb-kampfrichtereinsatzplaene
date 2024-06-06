@@ -40,8 +40,6 @@ class KampfgerichteRenderer extends React.Component<{storage: FrontendStorage, s
     }
 
     render() {
-
-        console.log(this.props.storage.wk_judgingtables);
         
         if(this.props.storage.wk_judgingtables === undefined || this.props.storage.wk_judgingtables === null || this.props.storage.wk_judgingtables.size === 0) {
             return(

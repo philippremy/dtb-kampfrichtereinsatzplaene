@@ -41,3 +41,10 @@
     gap: 15px;
     margin-bottom: 15px;
 }
+
+.tableFooterContainer {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}

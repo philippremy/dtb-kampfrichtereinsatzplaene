@@ -30,6 +30,11 @@
 ### To-Do's for 1.1.0
 - [x] Add Cyr Wheel Judging Tables
 
+### To-Do's for 1.1.1
+- [x] Add ability to copy existing tables safely
+- [x] Prevent standard page reloading in the
+- [x] Add line for clothing rules in template
+
 ### To-Do's for 1.X.0
 - [ ] Implement missing menus
 - [ ] Refactor frontend syncing, so we don't have x million loc for the same thing. Makes compiling slow and we could just #[inline(always)] this
