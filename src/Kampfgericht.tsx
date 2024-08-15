@@ -2,7 +2,8 @@ import React from "react";
 import { FrontendStorage, Kampfgericht } from "./Editor";
 import "./Kampfgericht.css"
 import { Body1Stronger, Button, Caption1, Card, CardFooter, CardHeader, Checkbox, CheckboxOnChangeData, Combobox, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, Input, Option, Divider } from "@fluentui/react-components";
-import { CheckmarkFilled, PenFilled, WarningFilled } from "@fluentui/react-icons";
+import { CheckmarkFilled, PenFilled, WarningFilled, CopySelectFilled } from "@fluentui/react-icons";
+import { v4 as uuidv4 } from "uuid";
 
 interface StateType {
     ok: boolean | undefined
@@ -307,6 +308,19 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
         this.props.setStorage(Object.assign({}, temp_storage));
     }
 
+    duplicateSelf() {
+        for(const table of this.props.storage.wk_judgingtables!) {
+            if(table[0] === this.props.uniqueID) {
+                const duplicatedTable = Object.assign({}, table);
+                duplicatedTable[0] = uuidv4().toString();
+                let temp_storage = this.props.storage;
+                temp_storage.wk_judgingtables?.set(duplicatedTable[0], duplicatedTable[1]);
+                temp_storage.changedByDoubleHook = false;
+                this.props.setStorage(Object.assign({}, temp_storage));
+            }
+        }
+    }  
+
     render() {
 
         // TODO für Irgendwann. Hover einbauen, braucht wahrscheinlich nen State ^^
@@ -372,8 +386,11 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
                     } />
                     {this.matchTypeAndGetElements()}
                     <CardFooter>
-                        <Checkbox label={"Finale?"} onChange={(_ev, data) => this.updateToFinale(data)} defaultChecked={this.dataSelf.table_is_finale} />
-                    </CardFooter>
+                        <div className="tableFooterContainer">
+                          <Checkbox label={"Finale?"} onChange={(_ev, data) => this.updateToFinale(data)} defaultChecked={this.dataSelf.table_is_finale} />
+                          <Button appearance="subtle" icon={<CopySelectFilled />} onClick={() => { this.duplicateSelf() }}/>
+                        </div>
+                   </CardFooter>
                 </Card>
                 <Dialog open={this.state.dialogOpen} onOpenChange={(_ev, data) => this.setState({dialogOpen: data.open})}>
                 <DialogSurface>

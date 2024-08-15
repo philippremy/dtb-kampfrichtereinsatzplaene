@@ -8,4 +8,4 @@ Eine neue Version ist verfügbar.
 
 ---
 
-Letzter Commit in *main*: TBI.
+Letzter Commit in *main*: [c496ccd](https://github.com/philippremy/dtb-kampfrichtereinsatzplaene/commit/c496ccd139d7264f68fa6e77fc5e148b4f8d636e).

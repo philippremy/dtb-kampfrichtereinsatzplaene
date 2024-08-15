@@ -38,6 +38,21 @@ export type FrontendStorage = {
 }
 
 function Editor() {
+    
+    // Prevent any unwanted manual reloads
+    document.addEventListener('keydown', function(event) {
+      // Prevent F5 or Ctrl+R (Windows/Linux) and Command+R (Mac) from refreshing the page
+      if (event.key === 'F5' || (event.ctrlKey && event.key === 'r') || (event.metaKey && event.key === 'r')) {
+        event.preventDefault();
+        console.log("Prevented an (unwanted) manual reload operation of the page.");
+      }
+    });
+
+    document.addEventListener('contextmenu', function(event) {
+      // Prevent reload from context menu
+      event.preventDefault();
+      console.log("Prevented a context menu to prevent the use from (unwillingly) reloading the page.");
+    });
 
     // Function to show a file in finder
     async function showInFolder(path: string) {
