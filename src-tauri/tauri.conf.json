@@ -2,124 +2,65 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist",
-    "withGlobalTauri": false
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420"
   },
-  "package": {
-    "productName": "DTB Kampfrichtereinsatzpläne"
-  },
-  "tauri": {
-    "updater": {
-      "active": true,
-      "endpoints" : ["https://gist.githubusercontent.com/philippremy/3ef056d35566a0ed60eda665d70d33fc/raw/"],
-      "dialog": false,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRGNjIyNzI1NDUwMTZFMTYKUldRV2JnRkZKU2RpVCs0NGhFbkU1S2tuMUtXTDIyOFNqQ012dUk4RjltaFNVSFI4YmhhZUE0STAK",
-      "windows": {
-        "installMode": "passive"
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis",
+      "app",
+      "dmg"
+    ],
+    "windows": {
+      "allowDowngrades": true,
+      "certificateThumbprint": null,
+      "digestAlgorithm": null,
+      "nsis": {
+        "languages": [
+          "German",
+          "English"
+        ],
+        "installerIcon": "../installer/installerIcon.ico",
+        "displayLanguageSelector": true,
+        "compression": "lzma",
+        "headerImage": "../installer/headerImage.bmp",
+        "sidebarImage": "../installer/sidebarImage.bmp"
+      },
+      "timestampUrl": null,
+      "tsp": false,
+      "wix": {
+        "language": [
+          "en-US",
+          "de-DE"
+        ],
+        "bannerPath": "../installer/bannerImage.bmp",
+        "dialogImagePath": "../installer/dialogImage.bmp"
+      },
+      "webviewInstallMode": {
+        "silent": true,
+        "type": "embedBootstrapper"
       }
     },
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "open": true
-      },
-      "window": {
-        "all": false,
-        "center": false,
-        "close": true,
-        "create": true,
-        "hide": false,
-        "maximize": false,
-        "minimize": false,
-        "print": false,
-        "requestUserAttention": false,
-        "setAlwaysOnTop": false,
-        "setClosable": false,
-        "setContentProtected": false,
-        "setCursorGrab": false,
-        "setCursorIcon": false,
-        "setCursorPosition": false,
-        "setCursorVisible": false,
-        "setDecorations": false,
-        "setFocus": false,
-        "setFullscreen": false,
-        "setIcon": false,
-        "setIgnoreCursorEvents": false,
-        "setMaxSize": false,
-        "setMaximizable": false,
-        "setMinSize": false,
-        "setMinimizable": false,
-        "setPosition": false,
-        "setResizable": false,
-        "setSize": false,
-        "setSkipTaskbar": false,
-        "setTitle": true,
-        "show": false,
-        "startDragging": false,
-        "unmaximize": false,
-        "unminimize": false
-      },
-      "dialog": {
-        "all": false,
-        "ask": true,
-        "confirm": false,
-        "message": false,
-        "open": true,
-        "save": true
-      },
-      "process": {
-        "relaunch": true
-      }
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "copyright": "© Philipp Remy 2024",
+    "shortDescription": "DTB Kampfrichtereinsatzpläne",
+    "longDescription": "Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB",
+    "category": "Utilities",
+    "publisher": "Philipp Remy",
+    "macOS": {
+      "minimumSystemVersion": "10.13",
+      "frameworks": [
+        "../lib/libkampfrichtereinsatzplaene_docx/build/libkampfrichtereinsatzplaene_docx.dylib"
+      ]
     },
-    "bundle": {
-      "active": true,
-      "targets": ["nsis", "app", "dmg", "updater"],
-      "identifier": "de.philippremy.dtb-kampfrichtereinsatzplaene",
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "copyright": "© Philipp Remy 2024",
-      "shortDescription": "DTB Kampfrichtereinsatzpläne",
-      "longDescription": "Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB",
-      "category": "Utilities",
-      "publisher": "Philipp Remy",
-      "macOS": {
-        "minimumSystemVersion": "10.13",
-        "license": "../installer/LICENSE.rtf",
-        "frameworks": ["../lib/libkampfrichtereinsatzplaene_docx/build/libkampfrichtereinsatzplaene_docx.dylib"]
-      },
-      "windows": {
-        "allowDowngrades": true,
-        "certificateThumbprint": null,
-        "digestAlgorithm": null,
-        "nsis": {
-          "license": "../installer/LICENSE.rtf",
-          "installerIcon": "../installer/installerIcon.ico",
-          "displayLanguageSelector": true,
-          "compression": "lzma",
-          "headerImage": "../installer/headerImage.bmp",
-          "sidebarImage": "../installer/sidebarImage.bmp",
-          "languages": ["German", "English"]
-        },
-        "timestampUrl": null,
-        "tsp": false,
-        "webviewFixedRuntimePath": null,
-        "webviewInstallMode": {
-          "silent": true,
-          "type": "embedBootstrapper"
-        },
-        "wix": {
-          "license": "../installer/LICENSE.rtf",
-          "bannerPath": "../installer/bannerImage.bmp",
-          "dialogImagePath": "../installer/dialogImage.bmp",
-          "language": ["en-US", "de-DE"]
-        }
-      },
+    "linux": {
       "deb": {
         "files": {
           "./SharedLibs/libkampfrichtereinsatzplaene_docx.so": "../lib/libkampfrichtereinsatzplaene_docx/build/libkampfrichtereinsatzplaene_docx.so",
@@ -128,9 +69,24 @@
         }
       }
     },
-    "security": {
-      "csp": null
-    },
+    "licenseFile": "../installer/LICENSE.rtf",
+    "createUpdaterArtifacts": "v1Compatible"
+  },
+  "productName": "DTB Kampfrichtereinsatzpläne",
+  "mainBinaryName": "DTB Kampfrichtereinsatzpläne",
+  "identifier": "de.philippremy.dtb-kampfrichtereinsatzplaene",
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRGNjIyNzI1NDUwMTZFMTYKUldRV2JnRkZKU2RpVCs0NGhFbkU1S2tuMUtXTDIyOFNqQ012dUk4RjltaFNVSFI4YmhhZUE0STAK",
+      "endpoints": [
+        "https://gist.githubusercontent.com/philippremy/3ef056d35566a0ed60eda665d70d33fc/raw/"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
+  "app": {
     "windows": [
       {
         "fullscreen": false,
@@ -142,6 +98,10 @@
         "minHeight": 600,
         "label": "mainUI"
       }
-    ]
+    ],
+    "withGlobalTauri": false,
+    "security": {
+      "csp": null
+    }
   }
 }

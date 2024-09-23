@@ -1,5 +1,5 @@
-use std::{collections::HashMap, sync::Mutex};
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, sync::Mutex};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Kampfrichter {
@@ -81,11 +81,11 @@ pub enum ApplicationError {
 pub struct UpdateAvailablePayload {
     pub(crate) body: String,
     pub(crate) date: String,
-    pub(crate) version: String
+    pub(crate) version: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct UpdateProgressPayload {
     pub(crate) chunk_len: usize,
-    pub(crate) content_len: Option<u64>
+    pub(crate) content_len: Option<u64>,
 }

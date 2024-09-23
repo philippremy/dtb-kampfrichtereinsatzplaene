@@ -1,4 +1,9 @@
-use std::{fs::{self, OpenOptions}, io::{self}, path::{Path, PathBuf}, str::FromStr};
+use std::{
+    fs::{self, OpenOptions},
+    io::{self},
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 #[cfg(not(target_os = "macos"))]
 use std::fs::File;
@@ -57,7 +62,6 @@ pub struct FetcherOptions {
 }
 
 impl FetcherOptions {
-
     pub fn new() -> Self {
         Self {
             revision: Revision::Specific(CUR_REV.into()),
@@ -104,7 +108,7 @@ impl Fetcher {
     // look for good existing installation, if none exists then download and install
     pub fn fetch(&self) -> Result<PathBuf> {
         let rev = match self.options.revision {
-            Revision::Specific(ref v) => v.to_string()
+            Revision::Specific(ref v) => v.to_string(),
         };
 
         if let Ok(chrome_path) = self.chrome_path(&rev) {
@@ -209,7 +213,7 @@ impl Fetcher {
             path.parent()
                 .ok_or_else(|| anyhow!("Path {:?} does not have a parent directory", path))?,
         )
-            .map_err(|_err| anyhow!("Could not create directory at {:?}", path.parent()))?;
+        .map_err(|_err| anyhow!("Could not create directory at {:?}", path.parent()))?;
 
         info!("Creating file for download: {}", &path.display());
         let mut file = OpenOptions::new().create(true).write(true).open(&path)?;
@@ -336,8 +340,8 @@ fn get_project_dirs() -> Result<ProjectDirs> {
 }
 
 fn dl_url<R>(revision: R) -> String
-    where
-        R: AsRef<str>,
+where
+    R: AsRef<str>,
 {
     #[cfg(target_os = "linux")]
     {

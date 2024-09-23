@@ -6,12 +6,12 @@ import dtbLogo from "./assets/dtb-logo.svg";
 import dtbLogoLight from "./assets/dtb-logo-light.svg";
 import { FluentProvider, webLightTheme, webDarkTheme, Title2, Image, Button, useToastController, Toast, ToastTitle, ToastBody, Toaster, Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions, DialogTrigger, Spinner, Field, ProgressBar } from "@fluentui/react-components";
 import { FolderOpenFilled, FormNewFilled } from "@fluentui/react-icons";
-import { invoke } from "@tauri-apps/api";
-import { open } from "@tauri-apps/api/dialog";
-import { getCurrent } from "@tauri-apps/api/window";
+import { open } from "@tauri-apps/plugin-dialog";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { marked } from "marked";
-import { relaunch } from "@tauri-apps/api/process";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 function App() {
   function parseMarkdown(body: string) {
@@ -144,7 +144,7 @@ function App() {
   async function createWettkampf() {
     invoke("create_wettkampf").then((result) => {
       if (result === "NoError") {
-        const thisWindow = getCurrent();
+        const thisWindow = getCurrentWebviewWindow();
         thisWindow.close();
         return;
       }
@@ -242,9 +242,21 @@ function App() {
       if (file === null) {
         return;
       } else if (Array.isArray(file)) {
-        invoke("import_wk_file_and_open_editor", { filepath: file[0] }).then(
+        invoke("import_wk_file_and_open_editor", { filepath: file[0].path }).then(
           (response) => {
             if (response === "NoError") {
+              return;
+            } else {
+              showBackendError(response as string);
+            }
+          },
+        );
+      } else if (typeof file == "object") {
+        invoke("import_wk_file_and_open_editor", { filepath: file.path }).then(
+          (response) => {
+            if (response === "NoError") {
+              const thisWindow = getCurrentWebviewWindow();
+              thisWindow.close().then(() => {});
               return;
             } else {
               showBackendError(response as string);
@@ -255,7 +267,7 @@ function App() {
         invoke("import_wk_file_and_open_editor", { filepath: file }).then(
           (response) => {
             if (response === "NoError") {
-              const thisWindow = getCurrent();
+              const thisWindow = getCurrentWebviewWindow();
               thisWindow.close().then(() => {});
               return;
             } else {

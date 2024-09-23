@@ -4,32 +4,36 @@
 #![allow(non_snake_case)]
 #![warn(clippy::undocumented_unsafe_blocks)]
 
-use std::path::PathBuf;
-use std::collections::HashMap;
-use std::{env, thread};
-use std::fs::File;
-use std::panic::PanicInfo;
-use std::process::{abort, Command};
-use std::sync::atomic::{AtomicBool, AtomicI8, Ordering, AtomicU64};
-use headless_chrome::{Browser, LaunchOptions};
-use headless_chrome::types::PrintToPdfOptions;
-use tauri::{AppHandle, Manager, Menu, MenuItem, RunEvent, State, UpdaterEvent, WindowBuilder};
+use crate::types::{
+    ApplicationError, FrontendStorage, Storage, UpdateAvailablePayload, UpdateProgressPayload,
+};
 use crate::ChromeFetcher::{Fetcher, FetcherOptions, Revision};
+use crate::MailImpl::{send_mail, MessageKind};
 use crate::FFI::{create_tables_docx, create_tables_pdf};
-use crate::types::{ApplicationError, FrontendStorage, Storage, UpdateAvailablePayload, UpdateProgressPayload};
-use tokio::time::sleep;
-use crate::MailImpl::{MessageKind, send_mail};
-#[cfg(target_os = "linux")]
-use std::time::Duration;
+use headless_chrome::types::PrintToPdfOptions;
+use headless_chrome::{Browser, LaunchOptions};
+use tauri::menu::{AboutMetadataBuilder, Menu, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+use tauri_plugin_updater::UpdaterExt;
+use std::collections::HashMap;
+use std::fs::File;
+use std::panic::PanicHookInfo;
+use std::path::PathBuf;
+use std::process::{abort, Command};
+use std::sync::atomic::{AtomicBool, AtomicI8, AtomicU64, Ordering};
 #[cfg(target_os = "linux")]
 use std::sync::Mutex;
+#[cfg(target_os = "linux")]
+use std::time::Duration;
+use std::{env, thread};
+use tauri::{AppHandle, Emitter, Manager, State, Wry};
+use tokio::time::sleep;
 
+mod ChromeFetcher;
+mod FFI;
+mod MailImpl;
+mod log;
 /// Declares the usage of crate-wide modules.
 mod types;
-mod FFI;
-mod log;
-mod ChromeFetcher;
-mod MailImpl;
 
 // Linux struct
 #[cfg(target_os = "linux")]
@@ -63,8 +67,10 @@ fn update_mainwindow_loading_state(visible: bool) {
 /// Param 2: The managed Storage state object provided by Tauri.
 /// Returns: An ApplicationError to be handled by the frontend.
 #[tauri::command]
-fn update_storage_data(frontend_storage: FrontendStorage, storage: State<Storage>) -> ApplicationError {
-
+fn update_storage_data(
+    frontend_storage: FrontendStorage,
+    storage: State<Storage>,
+) -> ApplicationError {
     // Update all data. First, lock the relevant object and then update it.
     // Immediately after drop the lock.
 
@@ -149,67 +155,30 @@ fn update_storage_data(frontend_storage: FrontendStorage, storage: State<Storage
 #[tauri::command]
 async fn create_wettkampf(app_handle: AppHandle) -> ApplicationError {
 
-    // Create all the Menus
-    let mut window_menu = tauri::Menu::new();
-    let about_menu: tauri::MenuItem = tauri::MenuItem::About("DTB Kampfrichtereinsatzpläne".to_string(), tauri::AboutMetadata::new()
-        .authors(vec!["Philipp Remy <philipp.remy@dtb.de>".to_string()])
-        .license("GPL-3.0-only".to_string())
-        .copyright("© Philipp Remy 2024".to_string())
-        .comments("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB".to_string())
-        .version(APP_VERSION.to_string())
-        .website("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene".to_string())
-        .website_label("GitHub Repository".to_string())
-    );
-    let help_menu_item = tauri::CustomMenuItem::new("help", "Hilfe");
-    let whats_new_item = tauri::CustomMenuItem::new("whatsnew", "Was ist neu?");
-    let contact_support_item = tauri::CustomMenuItem::new("contactSupport", "Support kontaktieren");
-    let bug_report_item = tauri::CustomMenuItem::new("bugReport", "Bug melden");
-    let feedback_item = tauri::CustomMenuItem::new("feedback", "Feedback geben");
-    let log_item = tauri::CustomMenuItem::new("showLogs", "Logs anzeigen");
-    let licenses_item = tauri::CustomMenuItem::new("showLicenses", "Open Source Lizenzen anzeigen");
-    let other_submenu = tauri::Submenu::new("Sonstiges", Menu::new()
-        .add_item(help_menu_item)
-        .add_item(whats_new_item)
-        .add_native_item(MenuItem::Separator)
-        .add_item(contact_support_item)
-        .add_item(bug_report_item)
-        .add_item(feedback_item)
-        .add_native_item(MenuItem::Separator)
-        .add_item(log_item)
-        .add_native_item(MenuItem::Separator)
-        .add_item(licenses_item)
-    );
-    let application_submenu = tauri::Submenu::new("DTB Kampfrichtereinsatzpläne".to_string(), Menu::new()
-        .add_native_item(about_menu)
-        .add_native_item(MenuItem::Separator)
-        .add_native_item(MenuItem::Services)
-        .add_native_item(MenuItem::Separator)
-        .add_native_item(MenuItem::Hide)
-        .add_native_item(MenuItem::Minimize)
-        .add_native_item(MenuItem::EnterFullScreen)
-        .add_native_item(MenuItem::Separator)
-        .add_native_item(MenuItem::CloseWindow)
-        .add_native_item(MenuItem::Quit)
-    );
-
-    // Build them
-    window_menu = window_menu.add_submenu(application_submenu);
-    window_menu = window_menu.add_submenu(other_submenu);
-
-    let create_wettkampf_window = match tauri::WindowBuilder::new(&app_handle, "createWettkampf", tauri::WindowUrl::App(PathBuf::from("createWettkampf.html")))
-        .inner_size(515.0, 600.0)
-        .title("Wettkampf erstellen")
-        .focused(true)
-        .menu(window_menu)
-        .center()
-        .build()
+    let create_wettkampf_window = match tauri::WebviewWindowBuilder::new(
+        &app_handle,
+        "createWettkampf",
+        tauri::WebviewUrl::App(PathBuf::from("createWettkampf.html"))
+    )
+    .inner_size(515.0, 600.0)
+    .title("Wettkampf erstellen")
+    .focused(true)
+    .menu(build_menus(MenuKind::CreateWettkampf, &app_handle))
+    .center()
+    .build()
     {
-        Ok(window) => {window},
-        Err(err) => { eprintln!("Could not build CreateWettkampf window: {:?}", err); return ApplicationError::TauriWindowCreationError },
+        Ok(window) => window,
+        Err(err) => {
+            eprintln!("Could not build CreateWettkampf window: {:?}", err);
+            return ApplicationError::TauriWindowCreationError;
+        }
     };
     match create_wettkampf_window.show() {
-        Ok(()) => {},
-        Err(err) => {eprintln!("Could not show CreateWettkampf window: {:?}", err); return ApplicationError::TauriWindowShowError },
+        Ok(()) => {}
+        Err(err) => {
+            eprintln!("Could not show CreateWettkampf window: {:?}", err);
+            return ApplicationError::TauriWindowShowError;
+        }
     }
     return ApplicationError::NoError;
 }
@@ -221,204 +190,154 @@ async fn create_wettkampf(app_handle: AppHandle) -> ApplicationError {
 /// Returns: A Result always containing an Ok(ApplicationError) value - never void or something went terribly wrong.
 /// CAVEATS: async functions cannot simply use borrowed data like State<T>, so we need the anonymous lifetime specifier "'_" and have to return a Result.
 #[tauri::command]
-async fn sync_wk_data_and_open_editor(data: FrontendStorage, storage: State<'_, Storage>, app_handle: AppHandle) -> Result<ApplicationError, ()> {
-
+async fn sync_wk_data_and_open_editor(
+    data: FrontendStorage,
+    storage: State<'_, Storage>,
+    app_handle: AppHandle,
+) -> Result<ApplicationError, ()> {
     match storage.wk_name.lock() {
         Ok(mut guard) => {
             *guard = data.wk_name.clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_place.lock() {
         Ok(mut guard) => {
             *guard = data.wk_place;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_date.lock() {
         Ok(mut guard) => {
             *guard = data.wk_date;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_judgesmeeting_time.lock() {
         Ok(mut guard) => {
             *guard = data.wk_judgesmeeting_time;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_responsible_person.lock() {
         Ok(mut guard) => {
             *guard = data.wk_responsible_person;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
-    // Create all the Menus
-    let mut window_menu = tauri::Menu::new();
-    let about_menu: tauri::MenuItem = tauri::MenuItem::About("DTB Kampfrichtereinsatzpläne".to_string(), tauri::AboutMetadata::new()
-        .authors(vec!["Philipp Remy <philipp.remy@dtb.de>".to_string()])
-        .license("GPL-3.0-only".to_string())
-        .copyright("© Philipp Remy 2024".to_string())
-        .comments("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB".to_string())
-        .version(APP_VERSION.to_string())
-        .website("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene".to_string())
-        .website_label("GitHub Repository".to_string())
-    );
-    let save_wk_menu = tauri::CustomMenuItem::new("saveWk", "Wettkampf speichern...");
-    let save_wk_under_menu = tauri::CustomMenuItem::new("saveWkUnder", "Wettkampf speichern unter...");
-    let create_docx_menu = tauri::CustomMenuItem::new("createDocx", "Pläne als .docx speichern...");
-    let create_pdf_menu = tauri::CustomMenuItem::new("createPdf", "Pläne als .pdf speichern...");
-    let file_submenu = tauri::Submenu::new("Aktionen", Menu::new()
-        .add_item(save_wk_menu)
-        .add_item(save_wk_under_menu)
-        .add_native_item(MenuItem::Separator)
-        .add_item(create_docx_menu)
-        .add_item(create_pdf_menu)
-    );
-    let help_menu_item = tauri::CustomMenuItem::new("help", "Hilfe");
-    let whats_new_item = tauri::CustomMenuItem::new("whatsnew", "Was ist neu?");
-    let contact_support_item = tauri::CustomMenuItem::new("contactSupport", "Support kontaktieren");
-    let bug_report_item = tauri::CustomMenuItem::new("bugReport", "Bug melden");
-    let feedback_item = tauri::CustomMenuItem::new("feedback", "Feedback geben");
-    let log_item = tauri::CustomMenuItem::new("showLogs", "Logs anzeigen");
-    let licenses_item = tauri::CustomMenuItem::new("showLicenses", "Open Source Lizenzen anzeigen");
-    let other_submenu = tauri::Submenu::new("Sonstiges", Menu::new()
-        .add_item(help_menu_item)
-        .add_item(whats_new_item)
-        .add_native_item(MenuItem::Separator)
-        .add_item(contact_support_item)
-        .add_item(bug_report_item)
-        .add_item(feedback_item)
-        .add_native_item(MenuItem::Separator)
-        .add_item(log_item)
-        .add_native_item(MenuItem::Separator)
-        .add_item(licenses_item)
-    );
-    let application_submenu = tauri::Submenu::new("DTB Kampfrichtereinsatzpläne".to_string(), Menu::new()
-        .add_native_item(about_menu)
-        .add_native_item(MenuItem::Separator)
-        .add_native_item(MenuItem::Services)
-        .add_native_item(MenuItem::Separator)
-        .add_native_item(MenuItem::Hide)
-        .add_native_item(MenuItem::Minimize)
-        .add_native_item(MenuItem::EnterFullScreen)
-        .add_native_item(MenuItem::Separator)
-        .add_native_item(MenuItem::CloseWindow)
-        .add_native_item(MenuItem::Quit)
-    );
-
-    // Build them
-    window_menu = window_menu.add_submenu(application_submenu);
-    window_menu = window_menu.add_submenu(file_submenu);
-    window_menu = window_menu.add_submenu(other_submenu);
-
     // Create the Editor Window
-    let editor_window = match tauri::WindowBuilder::new(&app_handle, "editor", tauri::WindowUrl::App(PathBuf::from("editor.html")))
+    let editor_window = match tauri::WebviewWindowBuilder::new(
+        &app_handle,
+        "editor",
+        tauri::WebviewUrl::App(PathBuf::from("editor.html")),
+    )
     .inner_size(1250.0, 800.0)
     .title(format!["{} (nicht gespeichert)", data.wk_name])
     .focused(true)
+    .menu(build_menus(MenuKind::Editor, &app_handle))
     .center()
-    .menu(window_menu)
     .build()
     {
-        Ok(window) => {window},
+        Ok(window) => window,
         Err(err) => {
             eprintln!("Could not build the Editor window: {:?}", err);
-            return Ok(ApplicationError::TauriWindowCreationError)
-        },
+            return Ok(ApplicationError::TauriWindowCreationError);
+        }
     };
     match editor_window.show() {
-        Ok(()) => {},
+        Ok(()) => {}
         Err(err) => {
             eprintln!("Could not show the Editor window: {:?}", err);
-            return Ok(ApplicationError::TauriWindowShowError)
-        },
+            return Ok(ApplicationError::TauriWindowShowError);
+        }
     }
-    
+
     return Ok(ApplicationError::NoError);
 }
 
 #[tauri::command]
-async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<(FrontendStorage, Option<String>), ApplicationError> {
+async fn get_wk_data_to_frontend(
+    storage: State<'_, Storage>,
+) -> Result<(FrontendStorage, Option<String>), ApplicationError> {
     let mut frontend_storage = FrontendStorage::default();
     match storage.wk_name.lock() {
         Ok(guard) => {
             frontend_storage.wk_name = (*guard).clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Err(ApplicationError::MutexPoisonedError)
-        },
+            return Err(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_place.lock() {
         Ok(guard) => {
             frontend_storage.wk_place = (*guard).clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Err(ApplicationError::MutexPoisonedError)
-        },
+            return Err(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_date.lock() {
         Ok(guard) => {
             frontend_storage.wk_date = (*guard).clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Err(ApplicationError::MutexPoisonedError)
-        },
+            return Err(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_judgesmeeting_time.lock() {
         Ok(guard) => {
             frontend_storage.wk_judgesmeeting_time = (*guard).clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Err(ApplicationError::MutexPoisonedError)
-        },
+            return Err(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_responsible_person.lock() {
         Ok(guard) => {
             frontend_storage.wk_responsible_person = (*guard).clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Err(ApplicationError::MutexPoisonedError)
-        },
+            return Err(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_replacement_judges.lock() {
@@ -431,8 +350,8 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<(Fronten
         }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Err(ApplicationError::MutexPoisonedError)
-        },
+            return Err(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_judgingtables.lock() {
@@ -445,296 +364,303 @@ async fn get_wk_data_to_frontend(storage: State<'_, Storage>) -> Result<(Fronten
         }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Err(ApplicationError::MutexPoisonedError)
-        },
+            return Err(ApplicationError::MutexPoisonedError);
+        }
     }
 
     unsafe { return Ok((frontend_storage, SAVE_PATH.clone())) };
 }
 
 #[tauri::command]
-async fn sync_to_backend_and_save(frontendstorage: FrontendStorage, filepath: String, storage: State<'_, Storage>) -> Result<ApplicationError, ()> {
-
+async fn sync_to_backend_and_save(
+    frontendstorage: FrontendStorage,
+    filepath: String,
+    storage: State<'_, Storage>,
+) -> Result<ApplicationError, ()> {
     match storage.wk_name.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_name.clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_place.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_place;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_date.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_date;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_judgesmeeting_time.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_judgesmeeting_time;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_responsible_person.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_responsible_person;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_replacement_judges.lock() {
         Ok(mut guard) => {
             *guard = match frontendstorage.wk_replacement_judges {
-                Some(map) => {map},
-                None => {Vec::new()},
+                Some(map) => map,
+                None => Vec::new(),
             };
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_judgingtables.lock() {
         Ok(mut guard) => {
             *guard = match frontendstorage.wk_judgingtables {
-                Some(map) => {map},
-                None => {HashMap::new()},
+                Some(map) => map,
+                None => HashMap::new(),
             };
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     // Serialize data
     let serialized_data = match serde_json::to_string(storage.inner()) {
-        Ok(data) => {data}
+        Ok(data) => data,
         Err(err) => {
             eprintln!("Failed to serialize storage data: {:?}", err);
-            return Ok(ApplicationError::JSONSerializeError)
+            return Ok(ApplicationError::JSONSerializeError);
         }
     };
 
     // Write file at path!
     match std::fs::write(filepath, serialized_data) {
-        Ok(()) => {},
+        Ok(()) => {}
         Err(err) => {
             eprintln!("Failed to write serialized wk data to file: {:?}", err);
-            return Ok(ApplicationError::RustWriteFileError)
+            return Ok(ApplicationError::RustWriteFileError);
         }
     }
 
     return Ok(ApplicationError::NoError);
-
 }
 
 /// Function to sync all stuff and create the plans using FFI
 #[tauri::command]
-async fn sync_to_backend_and_create_docx(frontendstorage: FrontendStorage, filepath: String, storage: State<'_, Storage>) -> Result<ApplicationError, ()> {
-
+async fn sync_to_backend_and_create_docx(
+    frontendstorage: FrontendStorage,
+    filepath: String,
+    storage: State<'_, Storage>,
+) -> Result<ApplicationError, ()> {
     match storage.wk_name.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_name.clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_place.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_place;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_date.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_date;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_judgesmeeting_time.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_judgesmeeting_time;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_responsible_person.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_responsible_person;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_replacement_judges.lock() {
         Ok(mut guard) => {
             *guard = match frontendstorage.wk_replacement_judges {
-                Some(map) => {map},
-                None => {Vec::new()},
+                Some(map) => map,
+                None => Vec::new(),
             };
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_judgingtables.lock() {
         Ok(mut guard) => {
             *guard = match frontendstorage.wk_judgingtables {
-                Some(map) => { map },
-                None => { HashMap::new() },
+                Some(map) => map,
+                None => HashMap::new(),
             };
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     return Ok(create_tables_docx(storage.inner(), PathBuf::from(filepath)).unwrap());
-
 }
 
 #[tauri::command]
-async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepath: String, storage: State<'_, Storage>) -> Result<ApplicationError, ()> {
-
+async fn sync_to_backend_and_create_pdf(
+    frontendstorage: FrontendStorage,
+    filepath: String,
+    storage: State<'_, Storage>,
+) -> Result<ApplicationError, ()> {
     match storage.wk_name.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_name.clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_place.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_place;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_date.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_date;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_judgesmeeting_time.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_judgesmeeting_time;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_responsible_person.lock() {
         Ok(mut guard) => {
             *guard = frontendstorage.wk_responsible_person;
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_replacement_judges.lock() {
         Ok(mut guard) => {
             *guard = match frontendstorage.wk_replacement_judges {
-                Some(map) => {map},
-                None => {Vec::new()},
+                Some(map) => map,
+                None => Vec::new(),
             };
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_judgingtables.lock() {
         Ok(mut guard) => {
             *guard = match frontendstorage.wk_judgingtables {
-                Some(map) => { map },
-                None => { HashMap::new() },
+                Some(map) => map,
+                None => HashMap::new(),
             };
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     // Process backend library docx and html
@@ -755,13 +681,29 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
     }
 
     // Now use our local chromium install to generate the pdf
-    let browser = match Browser::new(LaunchOptions::default_builder().headless(true).enable_logging(true).path(chromium_binary).build().unwrap()) {
-        Ok(browser) => { browser },
-        Err(err) => { eprintln!("Could not open a Chromium browser instance: {:?}", err); return Ok(ApplicationError::BrowserCouldNotBeBuild) }
+    let browser = match Browser::new(
+        LaunchOptions::default_builder()
+            .headless(true)
+            .enable_logging(true)
+            .path(chromium_binary)
+            .build()
+            .unwrap(),
+    ) {
+        Ok(browser) => browser,
+        Err(err) => {
+            eprintln!("Could not open a Chromium browser instance: {:?}", err);
+            return Ok(ApplicationError::BrowserCouldNotBeBuild);
+        }
     };
     let tab = match browser.new_tab() {
-        Ok(tab) => { tab },
-        Err(err) => { eprintln!("Could not create a new tab in the Chromium browser instance: {:?}", err); return Ok(ApplicationError::NewTabCouldNotBeCreated) }
+        Ok(tab) => tab,
+        Err(err) => {
+            eprintln!(
+                "Could not create a new tab in the Chromium browser instance: {:?}",
+                err
+            );
+            return Ok(ApplicationError::NewTabCouldNotBeCreated);
+        }
     };
 
     // Fetch the generated html file
@@ -769,15 +711,25 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
     let generated_docx = filepath.clone().replace(".pdf", "_temp.docx");
 
     // Navigate to it
-    let mut generated_html_tab = match tab.navigate_to(&format!["file://{}", generated_html.as_str()]) {
-        Ok(tab) => { tab },
-        Err(err) => { eprintln!("Could not navigate to the specified URL in the Chromium browser instance: {:?}", err); return Ok(ApplicationError::NavigationToGeneratedHTMLFileFailed) }
-    };
+    let mut generated_html_tab =
+        match tab.navigate_to(&format!["file://{}", generated_html.as_str()]) {
+            Ok(tab) => tab,
+            Err(err) => {
+                eprintln!(
+                "Could not navigate to the specified URL in the Chromium browser instance: {:?}",
+                err
+            );
+                return Ok(ApplicationError::NavigationToGeneratedHTMLFileFailed);
+            }
+        };
 
     // Wait for navigation to finish
     generated_html_tab = match generated_html_tab.wait_until_navigated() {
-        Ok(tab) => { tab },
-        Err(err) => { eprintln!("Could not wait until the navigation to the specified URL in the Chromium browser instance finished: {:?}", err); return Ok(ApplicationError::WaitingForNavigationFailed) }
+        Ok(tab) => tab,
+        Err(err) => {
+            eprintln!("Could not wait until the navigation to the specified URL in the Chromium browser instance finished: {:?}", err);
+            return Ok(ApplicationError::WaitingForNavigationFailed);
+        }
     };
 
     // Print to pdf and get the binary data
@@ -791,26 +743,38 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
     pdf_options.margin_top = Some(0.0);
     pdf_options.scale = Some(1.0);
     let pdf_data = match generated_html_tab.print_to_pdf(Some(pdf_options)) {
-        Ok(data) => { data },
-        Err(err) => { eprintln!("Could not print the page to a PDF and acquire the data vector from the Chromium browser instance: {:?}", err); return Ok(ApplicationError::PDFGenerationInChromiumFailed) }
+        Ok(data) => data,
+        Err(err) => {
+            eprintln!("Could not print the page to a PDF and acquire the data vector from the Chromium browser instance: {:?}", err);
+            return Ok(ApplicationError::PDFGenerationInChromiumFailed);
+        }
     };
 
     // Write the pdf contents to file!
     match std::fs::write(filepath.clone(), pdf_data) {
-        Ok(()) => {},
-        Err(err) => { eprintln!("Could not write the generated PDF contents to the specified PDF file on the hard disk: {:?}", err); return Ok(ApplicationError::WritingPDFDataToDiskFailed) }
+        Ok(()) => {}
+        Err(err) => {
+            eprintln!("Could not write the generated PDF contents to the specified PDF file on the hard disk: {:?}", err);
+            return Ok(ApplicationError::WritingPDFDataToDiskFailed);
+        }
     }
 
     // Delete temporary files
     match std::fs::remove_file(generated_html) {
-        Ok(()) => {},
-        Err(err) => { eprintln!("Could not remove temporary generated HTML file: {:?}", err); return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed) }
+        Ok(()) => {}
+        Err(err) => {
+            eprintln!("Could not remove temporary generated HTML file: {:?}", err);
+            return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed);
+        }
     }
 
     // Delete temporary files
     match std::fs::remove_file(generated_docx) {
-        Ok(()) => {},
-        Err(err) => { println!("Could not remove temporary generated DOCX file: {:?}", err); return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed) }
+        Ok(()) => {}
+        Err(err) => {
+            println!("Could not remove temporary generated DOCX file: {:?}", err);
+            return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed);
+        }
     }
 
     return Ok(ApplicationError::NoError);
@@ -819,18 +783,21 @@ async fn sync_to_backend_and_create_pdf(frontendstorage: FrontendStorage, filepa
 // Function for loading a file from disk and importing this into frontend storage
 // Then open the editor
 #[tauri::command]
-async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Storage>, app_handle: AppHandle) -> Result <ApplicationError, ()> {
-
+async fn import_wk_file_and_open_editor(
+    filepath: String,
+    storage: State<'_, Storage>,
+    app_handle: AppHandle,
+) -> Result<ApplicationError, ()> {
     // Set the static thing so we know where this was saved!
     unsafe { SAVE_PATH = Some(filepath.clone()) };
 
     // Deserialize the file
     let imported_storage: Storage = match serde_json::from_reader(File::open(filepath).unwrap()) {
-        Ok(storage) => {storage},
+        Ok(storage) => storage,
         Err(err) => {
             eprintln!("Could not deserialize the wk data from the imported file (Maybe the file is corrupt or invalid?): {:?}", err);
-            return Ok(ApplicationError::JSONDeserializeImporterError)
-        },
+            return Ok(ApplicationError::JSONDeserializeImporterError);
+        }
     };
 
     // Update the storage
@@ -838,159 +805,119 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
         Ok(mut guard) => {
             *guard = imported_storage.wk_name.lock().unwrap().clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_place.lock() {
         Ok(mut guard) => {
             *guard = imported_storage.wk_place.lock().unwrap().clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_date.lock() {
         Ok(mut guard) => {
             *guard = imported_storage.wk_date.lock().unwrap().clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_judgesmeeting_time.lock() {
         Ok(mut guard) => {
-            *guard = imported_storage.wk_judgesmeeting_time.lock().unwrap().clone();
+            *guard = imported_storage
+                .wk_judgesmeeting_time
+                .lock()
+                .unwrap()
+                .clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_responsible_person.lock() {
         Ok(mut guard) => {
-            *guard = imported_storage.wk_responsible_person.lock().unwrap().clone();
+            *guard = imported_storage
+                .wk_responsible_person
+                .lock()
+                .unwrap()
+                .clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_replacement_judges.lock() {
         Ok(mut guard) => {
-            *guard = imported_storage.wk_replacement_judges.lock().unwrap().clone();
+            *guard = imported_storage
+                .wk_replacement_judges
+                .lock()
+                .unwrap()
+                .clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
     match storage.wk_judgingtables.lock() {
         Ok(mut guard) => {
             *guard = imported_storage.wk_judgingtables.lock().unwrap().clone();
             drop(guard);
-        },
+        }
         Err(err) => {
             eprintln!("Failed to acquire lock of mutex: {:?}", err);
-            return Ok(ApplicationError::MutexPoisonedError)
-        },
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
     }
 
-    // Create all the Menus
-    let mut window_menu = tauri::Menu::new();
-    let about_menu: tauri::MenuItem = tauri::MenuItem::About("DTB Kampfrichtereinsatzpläne".to_string(), tauri::AboutMetadata::new()
-        .authors(vec!["Philipp Remy <philipp.remy@dtb.de>".to_string()])
-        .license("GPL-3.0-only".to_string())
-        .copyright("© Philipp Remy 2024".to_string())
-        .comments("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB".to_string())
-        .version(APP_VERSION.to_string())
-        .website("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene".to_string())
-        .website_label("GitHub Repository".to_string())
-    );
-    let save_wk_menu = tauri::CustomMenuItem::new("saveWk", "Wettkampf speichern...");
-    let save_wk_under_menu = tauri::CustomMenuItem::new("saveWkUnder", "Wettkampf speichern unter...");
-    let create_docx_menu = tauri::CustomMenuItem::new("createDocx", "Pläne als .docx speichern...");
-    let create_pdf_menu = tauri::CustomMenuItem::new("createPdf", "Pläne als .pdf speichern...");
-    let file_submenu = tauri::Submenu::new("Aktionen", Menu::new()
-        .add_item(save_wk_menu)
-        .add_item(save_wk_under_menu)
-        .add_native_item(MenuItem::Separator)
-        .add_item(create_docx_menu)
-        .add_item(create_pdf_menu)
-    );
-    let help_menu_item = tauri::CustomMenuItem::new("help", "Hilfe");
-    let whats_new_item = tauri::CustomMenuItem::new("whatsnew", "Was ist neu?");
-    let contact_support_item = tauri::CustomMenuItem::new("contactSupport", "Support kontaktieren");
-    let bug_report_item = tauri::CustomMenuItem::new("bugReport", "Bug melden");
-    let feedback_item = tauri::CustomMenuItem::new("feedback", "Feedback geben");
-    let log_item = tauri::CustomMenuItem::new("showLogs", "Logs anzeigen");
-    let licenses_item = tauri::CustomMenuItem::new("showLicenses", "Open Source Lizenzen anzeigen");
-    let other_submenu = tauri::Submenu::new("Sonstiges", Menu::new()
-        .add_item(help_menu_item)
-        .add_item(whats_new_item)
-        .add_native_item(MenuItem::Separator)
-        .add_item(contact_support_item)
-        .add_item(bug_report_item)
-        .add_item(feedback_item)
-        .add_native_item(MenuItem::Separator)
-        .add_item(log_item)
-        .add_native_item(MenuItem::Separator)
-        .add_item(licenses_item)
-    );
-    let application_submenu = tauri::Submenu::new("DTB Kampfrichtereinsatzpläne".to_string(), Menu::new()
-        .add_native_item(about_menu)
-        .add_native_item(MenuItem::Separator)
-        .add_native_item(MenuItem::Services)
-        .add_native_item(MenuItem::Separator)
-        .add_native_item(MenuItem::Hide)
-        .add_native_item(MenuItem::Minimize)
-        .add_native_item(MenuItem::EnterFullScreen)
-        .add_native_item(MenuItem::Separator)
-        .add_native_item(MenuItem::CloseWindow)
-        .add_native_item(MenuItem::Quit)
-    );
-
-    // Build them
-    window_menu = window_menu.add_submenu(application_submenu);
-    window_menu = window_menu.add_submenu(file_submenu);
-    window_menu = window_menu.add_submenu(other_submenu);
-
     // Open the Editor!
-    let editor_window = match tauri::WindowBuilder::new(&app_handle, "editor", tauri::WindowUrl::App(PathBuf::from("editor.html")))
-        .inner_size(1250.0, 800.0)
-        .title(format!["{} (gespeichert)", imported_storage.wk_name.lock().unwrap()])
-        .focused(true)
-        .center()
-        .menu(window_menu)
-        .build()
+    let editor_window = match tauri::WebviewWindowBuilder::new(
+        &app_handle,
+        "editor",
+        tauri::WebviewUrl::App(PathBuf::from("editor.html")),
+    )
+    .inner_size(1250.0, 800.0)
+    .title(format![
+        "{} (gespeichert)",
+        imported_storage.wk_name.lock().unwrap()
+    ])
+    .focused(true)
+    .menu(build_menus(MenuKind::Editor, &app_handle))
+    .center()
+    .build()
     {
-        Ok(window) => {window},
+        Ok(window) => window,
         Err(err) => {
             eprintln!("Could not build the Editor window: {:?}", err);
-            return Ok(ApplicationError::TauriWindowCreationError)
-        },
+            return Ok(ApplicationError::TauriWindowCreationError);
+        }
     };
     match editor_window.show() {
-        Ok(()) => {},
+        Ok(()) => {}
         Err(err) => {
             eprintln!("Could not show the Editor window: {:?}", err);
-            return Ok(ApplicationError::TauriWindowShowError)
-        },
+            return Ok(ApplicationError::TauriWindowShowError);
+        }
     }
 
     return Ok(ApplicationError::NoError);
@@ -999,24 +926,46 @@ async fn import_wk_file_and_open_editor(filepath: String, storage: State<'_, Sto
 // Function for checking if we have a chrome binary installed on the system
 #[tauri::command]
 fn check_for_chrome_binary() -> bool {
-
     match directories::BaseDirs::new() {
-        None => { panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.") }
+        None => {
+            panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.")
+        }
         Some(dirs) => {
             let appdata_roaming_dir = dirs.data_dir();
-            let application_externals_dir = appdata_roaming_dir.join("de.philippremy.dtb-kampfrichtereinsatzplaene").join("Externals");
+            let application_externals_dir = appdata_roaming_dir
+                .join("de.philippremy.dtb-kampfrichtereinsatzplaene")
+                .join("Externals");
             #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-                let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(false).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1294836".to_string()));
+            let fetcher_options = FetcherOptions::new()
+                .with_allow_standard_dirs(false)
+                .with_allow_download(false)
+                .with_install_dir(Some(application_externals_dir))
+                .with_revision(Revision::Specific("1294836".to_string()));
             #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
-                let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(false).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1294832".to_string()));
+            let fetcher_options = FetcherOptions::new()
+                .with_allow_standard_dirs(false)
+                .with_allow_download(false)
+                .with_install_dir(Some(application_externals_dir))
+                .with_revision(Revision::Specific("1294832".to_string()));
             #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-                let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(false).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1294832".to_string()));
+            let fetcher_options = FetcherOptions::new()
+                .with_allow_standard_dirs(false)
+                .with_allow_download(false)
+                .with_install_dir(Some(application_externals_dir))
+                .with_revision(Revision::Specific("1294832".to_string()));
             #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-                let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(false).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1294832".to_string()));
+            let fetcher_options = FetcherOptions::new()
+                .with_allow_standard_dirs(false)
+                .with_allow_download(false)
+                .with_install_dir(Some(application_externals_dir))
+                .with_revision(Revision::Specific("1294832".to_string()));
             let fetcher = Fetcher::new(fetcher_options);
             let fetched_instance = match fetcher.fetch() {
-                Ok(path) => { path },
-                Err(err) => { eprintln!("Could not find a suitable Chromium version. This is recoverable (and non-fatal) and the user will be prompted to download one or all Chromium related functionality (i.e., PDFs) will be disabled. Error: {:?}", err); return false }
+                Ok(path) => path,
+                Err(err) => {
+                    eprintln!("Could not find a suitable Chromium version. This is recoverable (and non-fatal) and the user will be prompted to download one or all Chromium related functionality (i.e., PDFs) will be disabled. Error: {:?}", err);
+                    return false;
+                }
             };
             // SAFETY: This will only be fetched from different window instances, no race conditions
             // are to be expected. No human is that fast.
@@ -1030,22 +979,45 @@ fn check_for_chrome_binary() -> bool {
 #[tauri::command]
 async fn download_chrome() -> Result<ApplicationError, ()> {
     match directories::BaseDirs::new() {
-        None => { panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.") }
+        None => {
+            panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.")
+        }
         Some(dirs) => {
             let appdata_roaming_dir = dirs.data_dir();
-            let application_externals_dir = appdata_roaming_dir.join("de.philippremy.dtb-kampfrichtereinsatzplaene").join("Externals");
-	    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-            let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(true).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1294836".to_string()));
-	    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
-	    let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(true).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1294832".to_string()));
-	    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-	    let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(true).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1294832".to_string()));
+            let application_externals_dir = appdata_roaming_dir
+                .join("de.philippremy.dtb-kampfrichtereinsatzplaene")
+                .join("Externals");
+            #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+            let fetcher_options = FetcherOptions::new()
+                .with_allow_standard_dirs(false)
+                .with_allow_download(true)
+                .with_install_dir(Some(application_externals_dir))
+                .with_revision(Revision::Specific("1294836".to_string()));
+            #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+            let fetcher_options = FetcherOptions::new()
+                .with_allow_standard_dirs(false)
+                .with_allow_download(true)
+                .with_install_dir(Some(application_externals_dir))
+                .with_revision(Revision::Specific("1294832".to_string()));
+            #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+            let fetcher_options = FetcherOptions::new()
+                .with_allow_standard_dirs(false)
+                .with_allow_download(true)
+                .with_install_dir(Some(application_externals_dir))
+                .with_revision(Revision::Specific("1294832".to_string()));
             #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-            let fetcher_options = FetcherOptions::new().with_allow_standard_dirs(false).with_allow_download(true).with_install_dir(Some(application_externals_dir)).with_revision(Revision::Specific("1294832".to_string()));
-	    let fetcher = Fetcher::new(fetcher_options);
+            let fetcher_options = FetcherOptions::new()
+                .with_allow_standard_dirs(false)
+                .with_allow_download(true)
+                .with_install_dir(Some(application_externals_dir))
+                .with_revision(Revision::Specific("1294832".to_string()));
+            let fetcher = Fetcher::new(fetcher_options);
             let fetched_instance = match fetcher.fetch() {
-                Ok(path) => { path },
-                Err(err) => { eprintln!("Could not fetch a suitable Chromium version. This is non-recoverable (but non-fatal) and all Chromium related functionality (i.e., PDFs) will be disabled. Error: {:?}", err); return Ok(ApplicationError::ChromeDownloadError) }
+                Ok(path) => path,
+                Err(err) => {
+                    eprintln!("Could not fetch a suitable Chromium version. This is non-recoverable (but non-fatal) and all Chromium related functionality (i.e., PDFs) will be disabled. Error: {:?}", err);
+                    return Ok(ApplicationError::ChromeDownloadError);
+                }
             };
             // SAFETY: This will only be fetched from different window instances, no race conditions
             // are to be expected. No human is that fast.
@@ -1064,44 +1036,6 @@ fn check_if_pdf_is_available() -> bool {
             return true;
         }
     }
-}
-
-#[cfg(target_os = "linux")]
-#[tauri::command]
-fn show_item_in_folder(path: String, dbus_state: State<DbusState>) -> Result<(), String> {
-    let dbus_guard = dbus_state.0.lock().map_err(|e| e.to_string())?;
-
-    // see https://gitlab.freedesktop.org/dbus/dbus/-/issues/76
-    if dbus_guard.is_none() || path.contains(",") {
-        let mut path_buf = PathBuf::from(&path);
-        let new_path = match path_buf.is_dir() {
-            true => path,
-            false => {
-                path_buf.pop();
-                path_buf.into_os_string().into_string().unwrap()
-            }
-        };
-        Command::new("xdg-open")
-            .arg(&new_path)
-            .spawn()
-            .map_err(|e| format!("{e:?}"))?;
-    } else {
-        // https://docs.rs/dbus/latest/dbus/
-        let dbus = dbus_guard.as_ref().unwrap();
-        let proxy = dbus.with_proxy(
-            "org.freedesktop.FileManager1",
-            "/org/freedesktop/FileManager1",
-            Duration::from_secs(5),
-        );
-        let (_,): (bool,) = proxy
-            .method_call(
-                "org.freedesktop.FileManager1",
-                "ShowItems",
-                (vec![format!("file://{path}")], ""),
-            )
-            .map_err(|e| e.to_string())?;
-    }
-    Ok(())
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -1135,48 +1069,76 @@ fn show_item_in_folder(path: String) -> Result<(), String> {
 
 #[tauri::command]
 fn open_bug_reporter(kind: String, app_handle: AppHandle) -> Result<ApplicationError, ()> {
-
     // If we already found the window, show it. Then we should not create a new one or we might
     // panic.
     if app_handle.windows().contains_key("bugReport") {
         let windows = app_handle.windows();
         let bug_report_windows = match windows.get("bugReport") {
-            Some(window) => window, 
-            None => { eprintln!("Failed to get the bugReporter window from HashMap, although it was expected to be present."); return Ok(ApplicationError::TauriExistingWindowNotFoundError); }
+            Some(window) => window,
+            None => {
+                eprintln!("Failed to get the bugReporter window from HashMap, although it was expected to be present.");
+                return Ok(ApplicationError::TauriExistingWindowNotFoundError);
+            }
         };
         match bug_report_windows.show() {
-            Ok(()) => { return Ok(ApplicationError::NoError) },
-            Err(err) => { eprintln!("Failed to show BugReport Window: {:?}", err); return Ok(ApplicationError::TauriWindowShowError) }
+            Ok(()) => return Ok(ApplicationError::NoError),
+            Err(err) => {
+                eprintln!("Failed to show BugReport Window: {:?}", err);
+                return Ok(ApplicationError::TauriWindowShowError);
+            }
         }
     }
-    
+
     // If there was none and we got here, create a new one.
-    let window = match WindowBuilder::new(&app_handle, "bugReport", tauri::WindowUrl::App("bugreporter.html".into()))
-        .inner_size(600.0, 500.0)
-        .center()
-        .title(format!("[{kind}] Report"))
-        .focused(true)
-        .initialization_script(format!(r#"
+    let window = match tauri::WebviewWindowBuilder::new(
+        &app_handle,
+        "bugReport",
+        tauri::WebviewUrl::App("bugreporter.html".into()),
+    )
+    .inner_size(600.0, 500.0)
+    .center()
+    .title(format!("[{kind}] Report"))
+    .focused(true)
+    .menu(build_menus(MenuKind::BugReport, &app_handle))
+    .initialization_script(
+        format!(
+            r#"
             if (window.location.origin === 'https://tauri.app') {{
                 console.log("hello world from js init script");
                 window.__KIND__  = {kind}
             }}
-        "#).as_str())
-        .build() {
-            Ok(win) => win,
-            Err(err) => { eprintln!("Could not create BugReporter window: {:?}", err); return Ok(ApplicationError::TauriWindowCreationError); }
-        };
+        "#
+        )
+        .as_str(),
+    )
+    .build()
+    {
+        Ok(win) => win,
+        Err(err) => {
+            eprintln!("Could not create BugReporter window: {:?}", err);
+            return Ok(ApplicationError::TauriWindowCreationError);
+        }
+    };
     match window.show() {
-        Ok(()) => {},
-        Err(err) => { eprintln!("Could not show BugReporter window: {:?}", err); return Ok(ApplicationError::TauriWindowShowError) },
+        Ok(()) => {}
+        Err(err) => {
+            eprintln!("Could not show BugReporter window: {:?}", err);
+            return Ok(ApplicationError::TauriWindowShowError);
+        }
     }
 
     return Ok(ApplicationError::NoError);
 }
 
 #[tauri::command]
-async fn send_mail_from_frontend(name: Option<String>, mail: Option<String>, subject: String, message: String, sendlogs: bool, kind: String) -> Result<ApplicationError, ()> {
-
+async fn send_mail_from_frontend(
+    name: Option<String>,
+    mail: Option<String>,
+    subject: String,
+    message: String,
+    sendlogs: bool,
+    kind: String,
+) -> Result<ApplicationError, ()> {
     // First, we need to build a HTML element from the message. Replace all newline chars with <br />
     let message_formatted = message.replace("\n", "<br />");
 
@@ -1184,11 +1146,21 @@ async fn send_mail_from_frontend(name: Option<String>, mail: Option<String>, sub
     let final_message: String;
 
     if name.is_some() && mail.is_some() {
-        final_message = format!("<p>---------<br /><b>{}</b><br /><i>{}</i><br /><br />{message_formatted}</p>", name.unwrap(), mail.unwrap());
+        final_message = format!(
+            "<p>---------<br /><b>{}</b><br /><i>{}</i><br /><br />{message_formatted}</p>",
+            name.unwrap(),
+            mail.unwrap()
+        );
     } else if name.is_some() && mail.is_none() {
-        final_message = format!("<p>---------<br /><b>{}</b><br /><br />{message_formatted}</p>", name.unwrap());
+        final_message = format!(
+            "<p>---------<br /><b>{}</b><br /><br />{message_formatted}</p>",
+            name.unwrap()
+        );
     } else if name.is_none() && mail.is_some() {
-        final_message = format!("<p><---------<br /><i>{}</i><br /><br />{message_formatted}</p>", mail.unwrap());
+        final_message = format!(
+            "<p><---------<br /><i>{}</i><br /><br />{message_formatted}</p>",
+            mail.unwrap()
+        );
     } else {
         final_message = format!("<p>---------<br />{message_formatted}</p>");
     }
@@ -1229,10 +1201,8 @@ fn update_app(requested: bool) {
 // MARK: Main Function
 /// Main application entry function.
 fn main() {
-
     // Set panic hook to send mail if possible
-    std::panic::set_hook(Box::new(|info: &PanicInfo| {
-
+    std::panic::set_hook(Box::new(|info: &PanicHookInfo| {
         // Execute the regular hook
         let location = info.location().unwrap();
 
@@ -1261,8 +1231,13 @@ fn main() {
             }
         });
         match handle.join() {
-            Ok(()) => { abort(); },
-            Err(err) => { eprintln!("Failed to join PanicMailThread: {:?}", err); abort(); },
+            Ok(()) => {
+                abort();
+            }
+            Err(err) => {
+                eprintln!("Failed to join PanicMailThread: {:?}", err);
+                abort();
+            }
         }
     }));
 
@@ -1271,7 +1246,10 @@ fn main() {
     match log::activateLogging() {
         Ok(()) => {}
         Err(err) => {
-            panic!("Could not redirect StdOut and StdErr successfully: {:?}", err);
+            panic!(
+                "Could not redirect StdOut and StdErr successfully: {:?}",
+                err
+            );
         }
     }
 
@@ -1281,15 +1259,19 @@ fn main() {
     #[cfg(not(target_os = "windows"))]
     let table_file_binary = include_bytes!(r"../../res/Tabelle_Vorlage_Leer.docx");
     #[cfg(target_os = "windows")]
-        let template_file_binary = include_bytes!(r"..\..\res\Vorlage_Einsatzplan_Leer.docx");
+    let template_file_binary = include_bytes!(r"..\..\res\Vorlage_Einsatzplan_Leer.docx");
     #[cfg(target_os = "windows")]
-        let table_file_binary = include_bytes!(r"..\..\res\Tabelle_Vorlage_Leer.docx");
+    let table_file_binary = include_bytes!(r"..\..\res\Tabelle_Vorlage_Leer.docx");
 
     match directories::BaseDirs::new() {
-        None => {panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.")}
+        None => {
+            panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.")
+        }
         Some(dirs) => {
             let appdata_roaming_dir = dirs.data_dir();
-            let application_resources_dir = appdata_roaming_dir.join("de.philippremy.dtb-kampfrichtereinsatzplaene").join("Resources");
+            let application_resources_dir = appdata_roaming_dir
+                .join("de.philippremy.dtb-kampfrichtereinsatzplaene")
+                .join("Resources");
             // Create the folder if it does not exist!
             match std::fs::create_dir_all(application_resources_dir.clone()) {
                 Ok(()) => {}
@@ -1299,80 +1281,42 @@ fn main() {
             }
             // Copy the stuff to there and we should be good to go.
             // Write file at path!
-            match std::fs::write(application_resources_dir.clone().join("Vorlage_Einsatzplan_Leer.docx"), template_file_binary) {
+            match std::fs::write(
+                application_resources_dir
+                    .clone()
+                    .join("Vorlage_Einsatzplan_Leer.docx"),
+                template_file_binary,
+            ) {
                 Ok(()) => {}
                 Err(e) => panic!("Could not write the template file: {e}"),
             }
             // Write file at path!
-            match std::fs::write(application_resources_dir.clone().join("Tabelle_Vorlage_Leer.docx"), table_file_binary) {
-                Ok(()) => {},
+            match std::fs::write(
+                application_resources_dir
+                    .clone()
+                    .join("Tabelle_Vorlage_Leer.docx"),
+                table_file_binary,
+            ) {
+                Ok(()) => {}
                 Err(e) => panic!("Could not write the table file: {e}"),
             }
         }
     }
 
-    // Create all the Menus
-    let mut window_menu = tauri::Menu::new();
-    let about_menu: tauri::MenuItem = tauri::MenuItem::About("DTB Kampfrichtereinsatzpläne".to_string(), tauri::AboutMetadata::new()
-        .authors(vec!["Philipp Remy <philipp.remy@dtb.de>".to_string()])
-        .license("GPL-3.0-only".to_string())
-        .copyright("© Philipp Remy 2024".to_string())
-        .comments("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB".to_string())
-        .version(APP_VERSION.to_string())
-        .website("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene".to_string())
-        .website_label("GitHub Repository".to_string())
-    );
-    let open_wk_menu = tauri::CustomMenuItem::new("openWk", "Wettkampf öffnen");
-    let create_wk_menu = tauri::CustomMenuItem::new("createWk", "Wettkampf erstellen");
-    let file_submenu = tauri::Submenu::new("Aktionen", Menu::new()
-        .add_item(create_wk_menu)
-        .add_item(open_wk_menu)
-    );
-    let help_menu_item = tauri::CustomMenuItem::new("help", "Hilfe");
-    let whats_new_item = tauri::CustomMenuItem::new("whatsnew", "Was ist neu?");
-    let contact_support_item = tauri::CustomMenuItem::new("contactSupport", "Support kontaktieren");
-    let bug_report_item = tauri::CustomMenuItem::new("bugReport", "Bug melden");
-    let feedback_item = tauri::CustomMenuItem::new("feedback", "Feedback geben");
-    let log_item = tauri::CustomMenuItem::new("showLogs", "Logs anzeigen");
-    let licenses_item = tauri::CustomMenuItem::new("showLicenses", "Open Source Lizenzen anzeigen");
-    let other_submenu = tauri::Submenu::new("Sonstiges", Menu::new()
-        .add_item(help_menu_item)
-        .add_item(whats_new_item)
-        .add_native_item(MenuItem::Separator)
-        .add_item(contact_support_item)
-        .add_item(bug_report_item)
-        .add_item(feedback_item)
-        .add_native_item(MenuItem::Separator)
-        .add_item(log_item)
-        .add_native_item(MenuItem::Separator)
-        .add_item(licenses_item)
-    );
-    let application_submenu = tauri::Submenu::new("DTB Kampfrichtereinsatzpläne".to_string(), Menu::new()
-        .add_native_item(about_menu)
-        .add_native_item(MenuItem::Separator)
-        .add_native_item(MenuItem::Services)
-        .add_native_item(MenuItem::Separator)
-        .add_native_item(MenuItem::Hide)
-        .add_native_item(MenuItem::Minimize)
-        .add_native_item(MenuItem::EnterFullScreen)
-        .add_native_item(MenuItem::Separator)
-        .add_native_item(MenuItem::CloseWindow)
-        .add_native_item(MenuItem::Quit)
-    );
-
-    // Build them
-    window_menu = window_menu.add_submenu(application_submenu);
-    window_menu = window_menu.add_submenu(file_submenu);
-    window_menu = window_menu.add_submenu(other_submenu);
-
     #[cfg(not(target_os = "linux"))]
     tauri::Builder::default()
-        .menu(window_menu.clone())
+        .plugin(tauri_plugin_updater::Builder::new().target(tauri::utils::platform::target_triple().unwrap()).build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(Storage::default())
-        .updater_target(tauri::utils::platform::target_triple().unwrap())
         .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder, open_bug_reporter, send_mail_from_frontend, update_mainwindow_loading_state, update_app])
         .setup(|app| {
-            let handle = app.handle();
+            let handle = app.handle().clone();
+
+            // Set App Menu
+            app.set_menu(build_menus(MenuKind::Default, &handle)).unwrap();
+
             tauri::async_runtime::spawn(async move {
 
                 // Wait until the Window loaded, otherwise we might be too fast and
@@ -1384,32 +1328,60 @@ fn main() {
                     }
                 }
 
-                match tauri::updater::builder(handle.clone()).check().await {
-                    Ok(update) => {
-
-                        // We have to wait for an answer from the frontend
-                        // SAFETY: We only use atomic operations, so this is safe
-                        unsafe {
-                            while UPDATE_REQUESTED.load(Ordering::Relaxed) == 0 {
-                                sleep(std::time::Duration::from_millis(100)).await;
-                            }
-                            if UPDATE_REQUESTED.load(Ordering::Relaxed) == -1 {
-                                // Update was cancelled, exit the loop
-                                return;
-                            } else if UPDATE_REQUESTED.load(Ordering::Relaxed) == 1 {
-                                // Reset the progress (preventive)
-                                // SAFETY: We are using atomic operations only, so this is safe
-                                UPDATE_PROGRESS.store(0, Ordering::Relaxed);
-
-                                // Update was requested, start with it
-                                match update.download_and_install().await {
+                match handle.updater().unwrap().check().await {
+                    Ok(update_option) => {
+                        match update_option {
+                            Some(update) => {
+                                match handle.emit_to("mainUI", "updateIsAvailable", UpdateAvailablePayload{ body: update.body.clone().unwrap(), date: update.date.unwrap().to_string(), version: update.version.clone() }) {
                                     Ok(()) => {},
-                                    Err(err) => {
-                                        eprintln!("Could not download and install the update: {:?}", err);
+                                    Err(err) => { eprintln!("Failed to emit updateIsAvailable to frontend: {:?}", err); }
+                                }
+        
+                                // We have to wait for an answer from the frontend
+                                // SAFETY: We only use atomic operations, so this is safe
+                                unsafe {
+                                    while UPDATE_REQUESTED.load(Ordering::Relaxed) == 0 {
+                                        sleep(std::time::Duration::from_millis(100)).await;
+                                    }
+                                    if UPDATE_REQUESTED.load(Ordering::Relaxed) == -1 {
+                                        // Update was cancelled, exit the loop
+                                        return;
+                                    } else if UPDATE_REQUESTED.load(Ordering::Relaxed) == 1 {
+                                        // Reset the progress (preventive)
+                                        // SAFETY: We are using atomic operations only, so this is safe
+                                        UPDATE_PROGRESS.store(0, Ordering::Relaxed);
+        
+                                        // Update was requested, start with it
+                                        match update.download_and_install(|chunk_length, content_length| {
+                                            // Get a temp value that we can increase
+                                            // SAFETY: We are using atomic operations only, so this is safe
+                                            let mut temp_progress;
+                                            temp_progress = UPDATE_PROGRESS.load(Ordering::Relaxed);
+                                            temp_progress += chunk_length as u64;
+                                            UPDATE_PROGRESS.store(temp_progress, Ordering::Relaxed);
+                                            match handle.emit_to("mainUI", "updateHasProgress", UpdateProgressPayload{ chunk_len: temp_progress as usize, content_len: content_length }) {
+                                                Ok(()) => {},
+                                                Err(err) => { eprintln!("Failed to emit updateHasProgress to frontend: {:?}", err); }
+                                            }
+                                        }, || {
+                                            match handle.emit_to("mainUI", "updateIsDownloaded", {}) {
+                                                Ok(()) => {},
+                                                Err(err) => { eprintln!("Failed to emit updateIsDownloaded to frontend: {:?}", err); }
+                                            }
+                                        }).await {
+                                            Ok(()) => {},
+                                            Err(err) => {
+                                                eprintln!("Could not download and install the update: {:?}", err);
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        eprintln!("Unexpected atomic value of UPDATE_REQUESTED found: {:?}", UPDATE_REQUESTED.load(Ordering::Relaxed));
                                     }
                                 }
-                            } else {
-                                eprintln!("Unexpected atomic value of UPDATE_REQUESTED found: {:?}", UPDATE_REQUESTED.load(Ordering::Relaxed));
+                            }
+                            None => {
+
                             }
                         }
                     },
@@ -1422,283 +1394,411 @@ fn main() {
                     }
                 }
             });
-            Ok(())
-        })
-        .on_menu_event(move |ev| {
-            // Get an AppHandle Clone
-            let app_handle = ev.window().app_handle().clone();
-            match ev.menu_item_id() {
-                "showLicenses" => {
-                    if app_handle.windows().contains_key("licenseWindow") {
-                        let windows = app_handle.windows();
-                        let license_window = windows.get("licenseWindow").unwrap();
+
+
+            // Handle Menu Events
+            app.on_menu_event(|app_handle, ev|{
+                match ev.id.0.as_str() {
+                    "showLicenses" => {
+                        if app_handle.windows().contains_key("licenseWindow") {
+                            let windows = app_handle.windows();
+                            let license_window = windows.get("licenseWindow").unwrap();
+                            license_window.show().unwrap();
+                            license_window.set_focus().unwrap();
+                            return;
+                        }
+                        let license_window = tauri::WebviewWindowBuilder::new(&app_handle.clone(), "licenseWindow", tauri::WebviewUrl::App(PathBuf::from("licenses.html")))
+                            .inner_size(550.0, 600.0)
+                            .title("Open Source Lizenzen".to_string())
+                            .center()
+                            .focused(true)
+                            .menu(build_menus(MenuKind::LicenseWindow, &app_handle))
+                            .visible(true)
+                            .build()
+                            .unwrap();
                         license_window.show().unwrap();
-                        license_window.set_focus().unwrap();
-                        return;
-                    }
-                    let license_window = WindowBuilder::new(&app_handle.clone(), "licenseWindow", tauri::WindowUrl::App(PathBuf::from("licenses.html")))
-                        .menu(window_menu.clone())
-                        .inner_size(550.0, 600.0)
-                        .title("Open Source Lizenzen".to_string())
-                        .center()
-                        .focused(true)
-                        .visible(true)
-                        .build()
-                        .unwrap();
-                    license_window.show().unwrap();
-                },
-                "showLogs" => {
-                    unsafe {
-                        if STDOUT_FILE.clone().is_some() {
-                            match show_item_in_folder(STDOUT_FILE.clone().unwrap()) {
-                                Ok(()) => {}
-                                Err(err) => { eprintln!("Unable to show the logs in Explorer/Finder: {err}") },
-                            }
-                        } else {
-                            eprintln!("STDOUT_FILE and STDERR_FILE are 'None': Either we are running a development build or the piping process was not successful.");
-                        }
-                    }
-                },
-                "contactSupport" => {
-                    open_bug_reporter(String::from("SUPPORT"), app_handle.clone()).unwrap();
-                },
-                "bugReport" => {
-                    open_bug_reporter(String::from("BUG"), app_handle.clone()).unwrap();
-                },
-                "feedback" => {
-                    open_bug_reporter(String::from("FEEDBACK"), app_handle.clone()).unwrap();
-                },
-                &_ => { println!("The following menu is currently not implemented: {}", ev.menu_item_id()); }
-            }
-        })
-        .build(tauri::generate_context!())
-        .unwrap()
-        .run(|app_handle, ev| match ev {
-            RunEvent::Updater(update_event) => {
-                match update_event {
-                    UpdaterEvent::UpdateAvailable { body, date, version } => {
-                        match app_handle.emit_to("mainUI", "updateIsAvailable", UpdateAvailablePayload{ body, date: date.unwrap().to_string(), version }) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit updateIsAvailable to frontend: {:?}", err); }
-                        }
-                    }
-                    UpdaterEvent::Pending => {
-                        match app_handle.emit_to("mainUI", "updateIsPending", {}) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit updateIsPending to frontend: {:?}", err); }
-                        }
-                    }
-                    UpdaterEvent::DownloadProgress { chunk_length, content_length } => {
-                        // Get a temp value that we can increase
-                        // SAFETY: We are using atomic operations only, so this is safe
-                        let mut temp_progress;
-                       unsafe {
-                           temp_progress = UPDATE_PROGRESS.load(Ordering::Relaxed);
-                           temp_progress += chunk_length as u64;
-                           UPDATE_PROGRESS.store(temp_progress, Ordering::Relaxed);
-                       }
-
-                        match app_handle.emit_to("mainUI", "updateHasProgress", UpdateProgressPayload{ chunk_len: temp_progress as usize, content_len: content_length }) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit updateHasProgress to frontend: {:?}", err); }
-                        }
-                    }
-                    UpdaterEvent::Downloaded => {
-                        match app_handle.emit_to("mainUI", "updateIsDownloaded", {}) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit updateIsDownloaded to frontend: {:?}", err); }
-                        }
-                    }
-                    UpdaterEvent::Updated => {
-                        match app_handle.emit_to("mainUI", "updateIsFinished", {}) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit updateIsFinished to frontend: {:?}", err); }
-                        }
-                    }
-                    UpdaterEvent::AlreadyUpToDate => {
-                        match app_handle.emit_to("mainUI", "noUpdateAvailable", {}) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit noUpdateAvailable to frontend: {:?}", err); }
-                        }
-                    }
-                    UpdaterEvent::Error(err) => {
-                        match app_handle.emit_to("mainUI", "updateThrewError", err.clone()) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit updateThrewError to frontend: {:?}", err); }
-                        }
-                        eprintln!("Error while handling the app update: {:?}", err);
-                    }
-                }
-            }
-            _ => { }
-        });
-
-    #[cfg(target_os = "linux")]
-    tauri::Builder::default()
-        .menu(window_menu.clone())
-        .manage(Storage::default())
-        .manage(DbusState(Mutex::new(dbus::blocking::SyncConnection::new_session().ok())))
-        .updater_target(tauri::utils::platform::target_triple().unwrap())
-        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder, open_bug_reporter, send_mail_from_frontend, update_mainwindow_loading_state, update_app])
-        .setup(|app| {
-            let handle = app.handle();
-            tauri::async_runtime::spawn(async move {
-
-                // Wait until the Window loaded, otherwise we might be too fast and
-                // don't receive the events
-                // SAFETY: This is safe, we are only accessing atomics
-                unsafe {
-                    while !MAINWINDOW_LOADED.load(Ordering::Relaxed) {
-                        sleep(std::time::Duration::from_millis(100)).await;
-                    }
-                }
-
-                match tauri::updater::builder(handle.clone()).check().await {
-                    Ok(update) => {
-
-                        // We have to wait for an answer from the frontend
-                        // SAFETY: We only use atomic operations, so this is safe
+                    },
+                    "showLogs" => {
                         unsafe {
-                            while UPDATE_REQUESTED.load(Ordering::Relaxed) == 0 {
-                                sleep(std::time::Duration::from_millis(100)).await;
-                            }
-                            if UPDATE_REQUESTED.load(Ordering::Relaxed) == -1 {
-                                // Update was cancelled, exit the loop
-                                return;
-                            } else if UPDATE_REQUESTED.load(Ordering::Relaxed) == 1 {
-                                // Reset the progress (preventive)
-                                // SAFETY: We are using atomic operations only, so this is safe
-                                UPDATE_PROGRESS.store(0, Ordering::Relaxed);
-
-                                // Update was requested, start with it
-                                match update.download_and_install().await {
-                                    Ok(()) => {},
-                                    Err(err) => {
-                                        eprintln!("Could not download and install the update: {:?}", err);
-                                    }
+                            if STDOUT_FILE.clone().is_some() {
+                                match show_item_in_folder(STDOUT_FILE.clone().unwrap()) {
+                                    Ok(()) => {}
+                                    Err(err) => { eprintln!("Unable to show the logs in Explorer/Finder: {err}") },
                                 }
                             } else {
-                                eprintln!("Unexpected atomic value of UPDATE_REQUESTED found: {:?}", UPDATE_REQUESTED.load(Ordering::Relaxed));
+                                eprintln!("STDOUT_FILE and STDERR_FILE are 'None': Either we are running a development build or the piping process was not successful.");
                             }
                         }
                     },
-                    Err(err) => {
-                        eprintln!("Could not fetch Update information: {:?}", err);
-                        match handle.clone().emit_to("mainUI", "updateThrewError", err.to_string()) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit updateThrewError to frontend: {:?}", err); }
-                        }
-                    }
+                    "contactSupport" => {
+                        open_bug_reporter(String::from("SUPPORT"), app_handle.clone()).unwrap();
+                    },
+                    "bugReport" => {
+                        open_bug_reporter(String::from("BUG"), app_handle.clone()).unwrap();
+                    },
+                    "feedback" => {
+                        open_bug_reporter(String::from("FEEDBACK"), app_handle.clone()).unwrap();
+                    },
+                    &_ => { println!("The following menu is currently not implemented: {}", ev.id.0); }
                 }
             });
+
             Ok(())
-        })
-        .on_menu_event(move |ev| {
-            // Get an AppHandle Clone
-            let app_handle = ev.window().app_handle().clone();
-            match ev.menu_item_id() {
-                "showLicenses" => {
-                    if app_handle.windows().contains_key("licenseWindow") {
-                        let windows = app_handle.windows();
-                        let license_window = windows.get("licenseWindow").unwrap();
-                        license_window.show().unwrap();
-                        license_window.set_focus().unwrap();
-                        return;
-                    }
-                    let license_window = WindowBuilder::new(&app_handle.clone(), "licenseWindow", tauri::WindowUrl::App(PathBuf::from("licenses.html")))
-                        .menu(window_menu.clone())
-                        .inner_size(550.0, 600.0)
-                        .title("Open Source Lizenzen".to_string())
-                        .center()
-                        .focused(true)
-                        .visible(true)
-                        .build()
-                        .unwrap();
-                    license_window.show().unwrap();
-                },
-                "showLogs" => {
-                    unsafe {
-                        if STDOUT_FILE.clone().is_some() {
-                            match show_item_in_folder(STDOUT_FILE.clone().unwrap()) {
-                                Ok(()) => {}
-                                Err(err) => { eprintln!("Unable to show the logs in Explorer/Finder: {err}") },
-                            }
-                        } else {
-                            eprintln!("STDOUT_FILE and STDERR_FILE are 'None': Either we are running a development build or the piping process was not successful.");
-                        }
-                    }
-                },
-                "contactSupport" => {
-                    open_bug_reporter(String::from("SUPPORT"), app_handle.clone()).unwrap();
-                },
-                "bugReport" => {
-                    open_bug_reporter(String::from("BUG"), app_handle.clone()).unwrap();
-                },
-                "feedback" => {
-                    open_bug_reporter(String::from("FEEDBACK"), app_handle.clone()).unwrap();
-                },
-                &_ => {}
-            }
         })
         .build(tauri::generate_context!())
         .unwrap()
-        .run(|app_handle, ev| match ev {
-            RunEvent::Updater(update_event) => {
-                match update_event {
-                    UpdaterEvent::UpdateAvailable { body, date, version } => {
-                        match app_handle.emit_to("mainUI", "updateIsAvailable", UpdateAvailablePayload{ body, date: date.unwrap().to_string(), version }) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit updateIsAvailable to frontend: {:?}", err); }
-                        }
-                    }
-                    UpdaterEvent::Pending => {
-                        match app_handle.emit_to("mainUI", "updateIsPending", {}) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit updateIsPending to frontend: {:?}", err); }
-                        }
-                    }
-                    UpdaterEvent::DownloadProgress { chunk_length, content_length } => {
-                        // Get a temp value that we can increase
-                        // SAFETY: We are using atomic operations only, so this is safe
-                        let mut temp_progress;
-                        unsafe {
-                            temp_progress = UPDATE_PROGRESS.load(Ordering::Relaxed);
-                            temp_progress += chunk_length as u64;
-                            UPDATE_PROGRESS.store(temp_progress, Ordering::Relaxed);
-                        }
+        .run(|_app_handle, _ev| {
 
-                        match app_handle.emit_to("mainUI", "updateHasProgress", UpdateProgressPayload{ chunk_len: temp_progress as usize, content_len: content_length }) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit updateHasProgress to frontend: {:?}", err); }
-                        }
-                    }
-                    UpdaterEvent::Downloaded => {
-                        match app_handle.emit_to("mainUI", "updateIsDownloaded", {}) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit updateIsDownloaded to frontend: {:?}", err); }
-                        }
-                    }
-                    UpdaterEvent::Updated => {
-                        match app_handle.emit_to("mainUI", "updateIsFinished", {}) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit updateIsFinished to frontend: {:?}", err); }
-                        }
-                    }
-                    UpdaterEvent::AlreadyUpToDate => {
-                        match app_handle.emit_to("mainUI", "noUpdateAvailable", {}) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit noUpdateAvailable to frontend: {:?}", err); }
-                        }
-                    }
-                    UpdaterEvent::Error(err) => {
-                        match app_handle.emit_to("mainUI", "updateThrewError", err.clone()) {
-                            Ok(()) => {},
-                            Err(err) => { eprintln!("Failed to emit updateThrewError to frontend: {:?}", err); }
-                        }
-                        eprintln!("Error while handling the app update: {:?}", err);
-                    }
-                }
-            }
-            _ => { }
         });
+
+}
+
+enum MenuKind {
+    Default,
+    CreateWettkampf,
+    Editor,
+    BugReport,
+    LicenseWindow,
+}
+
+fn build_menus(menuKind: MenuKind, app_handle: &AppHandle) -> Menu<Wry> {
+
+    match menuKind {
+        MenuKind::Default => {
+            let app_submenu = SubmenuBuilder::new(app_handle, "DTB Kampfrichtereinsatzpläne")
+                .about(Some(AboutMetadataBuilder::new()
+                    .authors(Some(vec!["Philipp Remy <philipp.remy@dtb.de>".to_string()]))
+                    .license(Some("GPL-3.0-only"))
+                    .copyright(Some("© Philipp Remy 2024"))
+                    .comments(Some("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB"))
+                    .version(Some(APP_VERSION))
+                    .website(Some("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene"))
+                    .website_label(Some("GitHub Repository"))
+                    .build()
+                ))
+                .separator()
+                .services()
+                .separator()
+                .hide()
+                .hide_others()
+                .show_all()
+                .separator()
+                .quit()
+                .build()
+                .unwrap();
+            let edit_submenu = SubmenuBuilder::new(app_handle, "Bearbeiten")
+                .undo()
+                .redo()
+                .separator()
+                .cut()
+                .copy()
+                .paste()
+                .select_all()
+                .build()
+                .unwrap();
+            let view_submenu = SubmenuBuilder::new(app_handle, "Darstellung")
+                .fullscreen()
+                .build()
+                .unwrap();
+            let window_submenu = SubmenuBuilder::new(app_handle, "Fenster")
+                .minimize()
+                .maximize()
+                .separator()
+                .close_window()
+                .build()
+                .unwrap();
+            let help_submenu = SubmenuBuilder::new(app_handle, "Hilfe")
+                .item(&MenuItemBuilder::new("Hilfe").id("help").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Was ist neu?").id("whatsnew").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Support kontaktieren").id("contactSupport").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Bug melden").id("bugReport").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Feedback geben").id("feedback").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Logs anzeigen").id("showLogs").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Open-Source Lizenzen").id("showLicenses").build(app_handle).unwrap())
+                .build()
+                .unwrap();
+            let menu = MenuBuilder::new(app_handle)
+                .build()
+                .unwrap();
+            menu.append(&app_submenu).unwrap();
+            menu.append(&edit_submenu).unwrap();
+            menu.append(&view_submenu).unwrap();
+            menu.append(&window_submenu).unwrap();
+            menu.append(&help_submenu).unwrap();
+            menu.set_as_app_menu().unwrap();
+            return menu;
+        },
+        MenuKind::CreateWettkampf => {
+            let app_submenu = SubmenuBuilder::new(app_handle, "DTB Kampfrichtereinsatzpläne")
+                .about(Some(AboutMetadataBuilder::new()
+                    .authors(Some(vec!["Philipp Remy <philipp.remy@dtb.de>".to_string()]))
+                    .license(Some("GPL-3.0-only"))
+                    .copyright(Some("© Philipp Remy 2024"))
+                    .comments(Some("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB"))
+                    .version(Some(APP_VERSION))
+                    .website(Some("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene"))
+                    .website_label(Some("GitHub Repository"))
+                    .build()
+                ))
+                .separator()
+                .services()
+                .separator()
+                .hide()
+                .hide_others()
+                .show_all()
+                .separator()
+                .quit()
+                .build()
+                .unwrap();
+            let edit_submenu = SubmenuBuilder::new(app_handle, "Bearbeiten")
+                .undo()
+                .redo()
+                .separator()
+                .cut()
+                .copy()
+                .paste()
+                .select_all()
+                .build()
+                .unwrap();
+            let view_submenu = SubmenuBuilder::new(app_handle, "Darstellung")
+                .fullscreen()
+                .build()
+                .unwrap();
+            let window_submenu = SubmenuBuilder::new(app_handle, "Fenster")
+                .minimize()
+                .maximize()
+                .separator()
+                .close_window()
+                .build()
+                .unwrap();
+            let help_submenu = SubmenuBuilder::new(app_handle, "Hilfe")
+                .item(&MenuItemBuilder::new("Hilfe").id("help").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Was ist neu?").id("whatsnew").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Support kontaktieren").id("contactSupport").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Bug melden").id("bugReport").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Feedback geben").id("feedback").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Logs anzeigen").id("showLogs").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Open-Source Lizenzen").id("showLicenses").build(app_handle).unwrap())
+                .build()
+                .unwrap();
+            let menu = MenuBuilder::new(app_handle)
+                .build()
+                .unwrap();
+            menu.append(&app_submenu).unwrap();
+            menu.append(&edit_submenu).unwrap();
+            menu.append(&view_submenu).unwrap();
+            menu.append(&window_submenu).unwrap();
+            menu.append(&help_submenu).unwrap();
+            menu.set_as_app_menu().unwrap();
+            return menu;
+        },
+        MenuKind::Editor => {
+            let app_submenu = SubmenuBuilder::new(app_handle, "DTB Kampfrichtereinsatzpläne")
+                .about(Some(AboutMetadataBuilder::new()
+                    .authors(Some(vec!["Philipp Remy <philipp.remy@dtb.de>".to_string()]))
+                    .license(Some("GPL-3.0-only"))
+                    .copyright(Some("© Philipp Remy 2024"))
+                    .comments(Some("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB"))
+                    .version(Some(APP_VERSION))
+                    .website(Some("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene"))
+                    .website_label(Some("GitHub Repository"))
+                    .build()
+                ))
+                .separator()
+                .services()
+                .separator()
+                .hide()
+                .hide_others()
+                .show_all()
+                .separator()
+                .quit()
+                .build()
+                .unwrap();
+            let edit_submenu = SubmenuBuilder::new(app_handle, "Bearbeiten")
+                .undo()
+                .redo()
+                .separator()
+                .cut()
+                .copy()
+                .paste()
+                .select_all()
+                .build()
+                .unwrap();
+            let view_submenu = SubmenuBuilder::new(app_handle, "Darstellung")
+                .fullscreen()
+                .build()
+                .unwrap();
+            let window_submenu = SubmenuBuilder::new(app_handle, "Fenster")
+                .minimize()
+                .maximize()
+                .separator()
+                .close_window()
+                .build()
+                .unwrap();
+            let help_submenu = SubmenuBuilder::new(app_handle, "Hilfe")
+                .item(&MenuItemBuilder::new("Hilfe").id("help").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Was ist neu?").id("whatsnew").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Support kontaktieren").id("contactSupport").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Bug melden").id("bugReport").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Feedback geben").id("feedback").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Logs anzeigen").id("showLogs").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Open-Source Lizenzen").id("showLicenses").build(app_handle).unwrap())
+                .build()
+                .unwrap();
+            let menu = MenuBuilder::new(app_handle)
+                .build()
+                .unwrap();
+            menu.append(&app_submenu).unwrap();
+            menu.append(&edit_submenu).unwrap();
+            menu.append(&view_submenu).unwrap();
+            menu.append(&window_submenu).unwrap();
+            menu.append(&help_submenu).unwrap();
+            menu.set_as_app_menu().unwrap();
+            return menu;
+        },
+        MenuKind::BugReport => {
+            let app_submenu = SubmenuBuilder::new(app_handle, "DTB Kampfrichtereinsatzpläne")
+                .about(Some(AboutMetadataBuilder::new()
+                    .authors(Some(vec!["Philipp Remy <philipp.remy@dtb.de>".to_string()]))
+                    .license(Some("GPL-3.0-only"))
+                    .copyright(Some("© Philipp Remy 2024"))
+                    .comments(Some("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB"))
+                    .version(Some(APP_VERSION))
+                    .website(Some("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene"))
+                    .website_label(Some("GitHub Repository"))
+                    .build()
+                ))
+                .separator()
+                .services()
+                .separator()
+                .hide()
+                .hide_others()
+                .show_all()
+                .separator()
+                .quit()
+                .build()
+                .unwrap();
+            let edit_submenu = SubmenuBuilder::new(app_handle, "Bearbeiten")
+                .undo()
+                .redo()
+                .separator()
+                .cut()
+                .copy()
+                .paste()
+                .select_all()
+                .build()
+                .unwrap();
+            let view_submenu = SubmenuBuilder::new(app_handle, "Darstellung")
+                .fullscreen()
+                .build()
+                .unwrap();
+            let window_submenu = SubmenuBuilder::new(app_handle, "Fenster")
+                .minimize()
+                .maximize()
+                .separator()
+                .close_window()
+                .build()
+                .unwrap();
+            let help_submenu = SubmenuBuilder::new(app_handle, "Hilfe")
+                .item(&MenuItemBuilder::new("Hilfe").id("help").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Was ist neu?").id("whatsnew").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Support kontaktieren").id("contactSupport").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Bug melden").id("bugReport").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Feedback geben").id("feedback").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Logs anzeigen").id("showLogs").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Open-Source Lizenzen").id("showLicenses").build(app_handle).unwrap())
+                .build()
+                .unwrap();
+            let menu = MenuBuilder::new(app_handle)
+                .build()
+                .unwrap();
+            menu.append(&app_submenu).unwrap();
+            menu.append(&edit_submenu).unwrap();
+            menu.append(&view_submenu).unwrap();
+            menu.append(&window_submenu).unwrap();
+            menu.append(&help_submenu).unwrap();
+            menu.set_as_app_menu().unwrap();
+            return menu;
+        },
+        MenuKind::LicenseWindow => {
+            let app_submenu = SubmenuBuilder::new(app_handle, "DTB Kampfrichtereinsatzpläne")
+                .about(Some(AboutMetadataBuilder::new()
+                    .authors(Some(vec!["Philipp Remy <philipp.remy@dtb.de>".to_string()]))
+                    .license(Some("GPL-3.0-only"))
+                    .copyright(Some("© Philipp Remy 2024"))
+                    .comments(Some("Ein Programm zum Erstellen von Kampfrichtereinsatzplänen bei Rhönradwettkämpfen im DTB"))
+                    .version(Some(APP_VERSION))
+                    .website(Some("https://github.com/philippremy/dtb-kampfrichtereinsatzplaene"))
+                    .website_label(Some("GitHub Repository"))
+                    .build()
+                ))
+                .separator()
+                .services()
+                .separator()
+                .hide()
+                .hide_others()
+                .show_all()
+                .separator()
+                .quit()
+                .build()
+                .unwrap();
+            let edit_submenu = SubmenuBuilder::new(app_handle, "Bearbeiten")
+                .undo()
+                .redo()
+                .separator()
+                .cut()
+                .copy()
+                .paste()
+                .select_all()
+                .build()
+                .unwrap();
+            let view_submenu = SubmenuBuilder::new(app_handle, "Darstellung")
+                .fullscreen()
+                .build()
+                .unwrap();
+            let window_submenu = SubmenuBuilder::new(app_handle, "Fenster")
+                .minimize()
+                .maximize()
+                .separator()
+                .close_window()
+                .build()
+                .unwrap();
+            let help_submenu = SubmenuBuilder::new(app_handle, "Hilfe")
+                .item(&MenuItemBuilder::new("Hilfe").id("help").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Was ist neu?").id("whatsnew").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Support kontaktieren").id("contactSupport").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Bug melden").id("bugReport").build(app_handle).unwrap())
+                .item(&MenuItemBuilder::new("Feedback geben").id("feedback").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Logs anzeigen").id("showLogs").build(app_handle).unwrap())
+                .separator()
+                .item(&MenuItemBuilder::new("Open-Source Lizenzen").id("showLicenses").build(app_handle).unwrap())
+                .build()
+                .unwrap();
+            let menu = MenuBuilder::new(app_handle)
+                .build()
+                .unwrap();
+            menu.append(&app_submenu).unwrap();
+            menu.append(&edit_submenu).unwrap();
+            menu.append(&view_submenu).unwrap();
+            menu.append(&window_submenu).unwrap();
+            menu.append(&help_submenu).unwrap();
+            menu.set_as_app_menu().unwrap();
+            return menu;
+        },
+    };
+
 }

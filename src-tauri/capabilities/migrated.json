@@ -1,0 +1,27 @@
+{
+  "identifier": "migrated",
+  "description": "permissions that were migrated from v1",
+  "local": true,
+  "windows": [
+    "mainUI",
+    "main",
+    "createWettkampf",
+    "editor",
+    "bugReport",
+    "licenseWindow"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-create",
+    "core:window:allow-set-title",
+    "core:window:allow-close",
+    "shell:allow-open",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "dialog:allow-ask",
+    "process:allow-restart",
+    "dialog:default",
+    "shell:default",
+    "process:default"
+  ]
+}

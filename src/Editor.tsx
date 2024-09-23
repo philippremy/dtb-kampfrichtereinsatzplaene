@@ -1,12 +1,12 @@
 import { Button, Caption2, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, FluentProvider, Input, Link, Menu, MenuButton, MenuButtonProps, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, SplitButton, Subtitle2, Text, Toast, ToastBody, Toaster, ToastFooter, ToastIntent, ToastTitle, ToastTrigger, useToastController, webDarkTheme, webLightTheme, Tooltip, Divider } from "@fluentui/react-components";
 import { AddFilled, CalendarFilled, CheckmarkFilled, ChevronDownRegular, DocumentFilled, ErrorCircleFilled, PenFilled, PersonFilled, PinFilled, SaveFilled, TimePickerFilled, TrophyFilled } from "@fluentui/react-icons";
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import React, { useEffect, useId, useState } from "react";
 import "./Editor.css";
 import { v4 as uuidv4 } from 'uuid';
 import KampfgerichteRenderer from "./KampfgerichteRenderer";
-import { ask, save } from "@tauri-apps/api/dialog";
-import { getCurrent } from "@tauri-apps/api/window";
+import { ask, save } from "@tauri-apps/plugin-dialog";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import ReplacementJudges from "./ReplacementJudges.tsx";
 
 // Kampfrichter Interface
@@ -197,7 +197,7 @@ function Editor() {
             } else {
                 updateToastWithID("saveToast", "success", "Speichern erfolgreich", "Der Wettkampf wurde gespeichert.", <CheckmarkFilled />, 3000, <Link onClick={() => {showInFolder(path)}}>Im Explorer anzeigen</Link>);
                 setLastSavePath(path);
-                let currentWindow = getCurrent();
+                let currentWindow = getCurrentWebviewWindow();
                 currentWindow.setTitle(frontendStorage.wk_name + " (gespeichert)").then(() => {});
             }
         });
@@ -342,7 +342,7 @@ function Editor() {
 
         temp_storage.changedByDoubleHook = true;
         setFrontendStorage(Object.assign({}, temp_storage));
-        let currentWindow = getCurrent();
+        let currentWindow = getCurrentWebviewWindow();
         if(temp_storage.wk_name !== "") {
             currentWindow.setTitle(temp_storage.wk_name + " (nicht gespeichert)").then(() => {});
         }

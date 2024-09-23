@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { open } from '@tauri-apps/api/shell';
+import { open } from '@tauri-apps/plugin-shell';
 import "./Licenses.css";
 import { FluentProvider, webLightTheme, webDarkTheme, Accordion, AccordionItem, AccordionHeader, Button, Divider, AccordionPanel, Card, Title3 } from "@fluentui/react-components";
 import { CalendarDateRegular, CodeFilled, FluentRegular, FolderListRegular, FolderSearchRegular, IconsRegular, NumberSymbolRegular, SettingsCogMultipleRegular, StoreMicrosoftRegular, TextAlignJustifyRegular, TextWholeWordRegular, WindowMultipleFilled, DocumentPdfRegular, CommentErrorRegular, WindowConsoleRegular, ArchiveRegular, PlugConnectedCheckmarkRegular, GlobeRegular, PipelineRegular, NumberRowRegular, PersonFeedbackRegular, MailEditRegular, PersonRunningRegular, ReadingListFilled, MarkdownFilled } from "@fluentui/react-icons";

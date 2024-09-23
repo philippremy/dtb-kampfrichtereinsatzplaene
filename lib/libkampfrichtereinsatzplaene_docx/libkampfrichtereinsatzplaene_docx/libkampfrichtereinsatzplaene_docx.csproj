@@ -40,9 +40,10 @@
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
       <OutputPath />
     </PropertyGroup>
-    
+
     <ItemGroup>
         <LinkerArg Include="-Wl,-rpath,'/usr/lib/swift'" Condition="$(RuntimeIdentifier.StartsWith('osx'))" />
+        <LinkerArg Include="-Wl,-rpath,'/usr/lib'" Condition="$(RuntimeIdentifier.StartsWith('osx'))" />
         <LinkerArg Include="-Wl,-install_name,'@executable_path/../Frameworks/libkampfrichtereinsatzplaene_docx.dylib'" Condition="$(RuntimeIdentifier.StartsWith('osx'))" />
         <LinkerArg Include="-Wl,-ld_classic" Condition="$(RuntimeIdentifier.StartsWith('osx'))" />
     </ItemGroup>
