@@ -18,10 +18,6 @@ use std::path::PathBuf;
 use std::process::{abort, Command};
 use std::sync::atomic::{AtomicBool, AtomicI8, AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock};
-#[cfg(target_os = "linux")]
-use std::sync::Mutex;
-#[cfg(target_os = "linux")]
-use std::time::Duration;
 use std::{env, thread};
 use tauri::{AppHandle, Emitter, Manager, State, Wry};
 use tokio::time::sleep;
@@ -31,10 +27,6 @@ mod MailImpl;
 mod log;
 mod types;
 mod PrintToPdfImpl;
-
-// Linux struct
-#[cfg(target_os = "linux")]
-pub struct DbusState(Mutex<Option<dbus::blocking::SyncConnection>>);
 
 // Force PlatformWebview to be Send
 struct PlatformWebViewWrapper {
