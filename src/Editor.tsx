@@ -59,21 +59,6 @@ function Editor() {
         await invoke('show_item_in_folder', {path});
     }
 
-    // State for checking if PDF printing is available
-    const [pdfIsDisabled, setPdfIsDisabled] = useState(true);
-
-    // Effect for checking if PDF printing is available
-    useEffect(() => {
-        invoke("check_if_pdf_is_available", {}).then((response) => {
-            let responseCast = response as boolean;
-            if(responseCast) {
-                setPdfIsDisabled(false);
-            } else {
-                setPdfIsDisabled(true);
-            }
-        });
-    }, []);
-
     // Theme thing :)
     useEffect(() => {
         const darkModePreference = window.matchMedia("(prefers-color-scheme: dark)");
@@ -525,9 +510,6 @@ function Editor() {
     // Everything for the replacement judges
     const [editorExists, setEditorExists] = useState(false);
 
-    // State for keeping track if the hintPopup is visible
-    const [hintVisible, setHintVisible] = useState(false);
-
     return (
         <FluentProvider theme={isLight ? webLightTheme : webDarkTheme}>
             <div id="editorHeader">
@@ -560,9 +542,7 @@ function Editor() {
                         <MenuPopover>
                             <MenuList>
                                 <MenuItem onClick={() => createPlans("docx")}>Als Word-Datei</MenuItem>
-                                <Tooltip content={"Chromium ist nicht installiert. Die Funktion ist deaktiviert."} relationship={"description"} positioning={"before"} withArrow={true} visible={pdfIsDisabled && hintVisible} onVisibleChange={(_ev, data) => setHintVisible(data.visible)} >
-                                    <MenuItem onClick={() => createPlans("pdf")} disabled={pdfIsDisabled}>Als PDF</MenuItem>
-                                </Tooltip>
+                                <MenuItem onClick={() => createPlans("pdf")}>Als PDF</MenuItem>
                             </MenuList>
                         </MenuPopover>
                     </Menu>

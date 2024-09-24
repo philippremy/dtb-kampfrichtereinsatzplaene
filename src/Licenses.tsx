@@ -22,14 +22,12 @@ export default function Licenses() {
         FluentUIIcons = "https://github.com/microsoft/fluentui-system-icons",
         ReactIcons = "https://github.com/react-icons/react-icons",
         UUID = "https://github.com/uuidjs/uuid",
-        HeadlessChrome = "https://github.com/rust-headless-chrome/rust-headless-chrome",
         Anyhow = "https://github.com/dtolnay/anyhow",
         Logrs = "https://github.com/rust-lang/log",
         Walkdir = "https://github.com/BurntSushi/walkdir",
         Zip = "https://github.com/zip-rs/zip2",
         Ureq = "https://github.com/algesten/ureq",
         Dbus = "https://github.com/diwic/dbus-rs",
-        Chromium = "https://chromium.googlesource.com/chromium/src.git",
         Clippit = "https://github.com/sergey-tihon/Clippit",
         Vergen = "https://github.com/rustyhorde/vergen",
         MailSend = "https://github.com/stalwartlabs/mail-send",
@@ -37,6 +35,10 @@ export default function Licenses() {
         Tokio = "https://github.com/tokio-rs/tokio",
         Marked = "https://github.com/markedjs/marked",
         Markdown = "https://daringfireball.net/projects/markdown/",
+        Objc2 = "https://github.com/madsmtm/objc2",
+        Objc2Foundation = "https://github.com/madsmtm/objc2",
+        Objc2AppKit = "https://github.com/madsmtm/objc2",
+        Objc2WebKit = "https://github.com/madsmtm/objc2"
     }
 
     // Theme thing :)
@@ -59,7 +61,7 @@ export default function Licenses() {
                 <Accordion collapsible={true} multiple={true}>
                     <AccordionItem value={"Tauri"}>
                         <AccordionHeader icon={<WindowMultipleFilled/>}>
-                            <div className={"description"}><p><b>Tauri (Framework)</b></p><p>v1.6.2</p><p><i>(MIT)</i>
+                            <div className={"description"}><p><b>Tauri (Framework)</b></p><p>v2.0.0-rc</p><p><i>(MIT)</i>
                             </p>
                                 <div className={"filler"}/>
                                 <Button appearance={"transparent"} icon={<FaGithub/>}
@@ -964,41 +966,6 @@ export default function Licenses() {
                         </AccordionPanel>
                         <Divider inset={true}/>
                     </AccordionItem>
-                    <AccordionItem value={"headless-chrome"}>
-                        <AccordionHeader button={<Button appearance={"outline"}/>} icon={<DocumentPdfRegular/>}>
-                            <div className={"description"}><p><b>headless-chrome</b></p><p>v1.0.9</p><p><i>(MIT)</i></p></div>
-                            <div className={"filler"}/>
-                            <Button appearance={"transparent"} icon={<FaGithub/>}
-                                    onClick={() => redirect(Repositories.HeadlessChrome)}/></AccordionHeader>
-                        <AccordionPanel>
-                            <Card className={"panel"}>
-                                <div className={"licenseText"}>
-                                    <b>MIT License</b>
-                                    <br/><br/>
-                                    Copyright © 2022 headless_chrome contributors.
-                                    <br/><br/>
-                                    Permission is hereby granted, free of charge, to any person obtaining a copy
-                                    of this software and associated documentation files (the "Software"), to deal
-                                    in the Software without restriction, including without limitation the rights
-                                    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-                                    copies of the Software, and to permit persons to whom the Software is
-                                    furnished to do so, subject to the following conditions:
-                                    <br/><br/>
-                                    The above copyright notice and this permission notice shall be included in all
-                                    copies or substantial portions of the Software.
-                                    <br/><br/>
-                                    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-                                    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-                                    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-                                    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-                                    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-                                    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-                                    SOFTWARE.
-                                </div>
-                            </Card>
-                        </AccordionPanel>
-                        <Divider inset={true}/>
-                    </AccordionItem>
                     <AccordionItem value={"anyhow"}>
                         <AccordionHeader button={<Button appearance={"outline"}/>} icon={<CommentErrorRegular/>}>
                             <div className={"description"}><p><b>Anyhow ¯\_(°ペ)_/¯</b></p><p>v1.0.82</p><p><i>(MIT)</i></p></div>
@@ -1390,51 +1357,6 @@ export default function Licenses() {
                         </AccordionPanel>
                         <Divider inset={true}/>
                     </AccordionItem>
-                    <AccordionItem value={"chromium"}>
-                        <AccordionHeader button={<Button appearance={"outline"}/>} icon={<GlobeRegular/>}>
-                            <div className={"description"}><p><b>Chromium</b></p><p>v126.0.6452.0</p><p><i>(BSD-3-Clause)</i></p></div>
-                            <div className={"filler"}/>
-                            <Button appearance={"transparent"} icon={<FaGithub/>}
-                                    onClick={() => redirect(Repositories.Chromium)}/></AccordionHeader>
-                        <AccordionPanel>
-                            <Card className={"panel"}>
-                                <div className={"licenseText"}>
-                                    <b>BSD-3-Clause License</b>
-                                    <br/><br/><br/><br/>
-                                    Copyright 2015 - 2024 The Chromium Authors.
-                                    <br/><br/><br/><br/>
-                                    Redistribution and use in source and binary forms, with or without
-                                    modification, are permitted provided that the following conditions are
-                                    met:
-                                    <br/><br/><br/><br/>
-                                    * Redistributions of source code must retain the above copyright
-                                    notice, this list of conditions and the following disclaimer.
-                                    <br/><br/>
-                                    * Redistributions in binary form must reproduce the above
-                                    copyright notice, this list of conditions and the following disclaimer
-                                    in the documentation and/or other materials provided with the
-                                    distribution.
-                                    <br/><br/>
-                                    * Neither the name of Google LLC nor the names of its
-                                    contributors may be used to endorse or promote products derived from
-                                    this software without specific prior written permission.
-                                    <br/><br/><br/><br/>
-                                    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-                                    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-                                    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-                                    A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-                                    OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-                                    SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-                                    LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-                                    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-                                    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-                                    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-                                    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-                                </div>
-                            </Card>
-                        </AccordionPanel>
-                        <Divider inset={true}/>
-                    </AccordionItem>
                     <AccordionItem value={"clippit"}>
                         <AccordionHeader button={<Button appearance={"outline"}/>} icon={<DocumentPdfRegular/>}>
                             <div className={"description"}><p><b>Clippit (Modified)</b></p><p>v2.1.1 (commit 8e09e70)</p><p><i>(MIT)</i></p></div>
@@ -1686,6 +1608,146 @@ export default function Licenses() {
                                     contract, strict liability, or tort (including negligence or otherwise) arising in
                                     any way out of the use of this software, even if advised of the possibility of such
                                     damage.
+                                </div>
+                            </Card>
+                        </AccordionPanel>
+                        <Divider inset={true}/>
+                    </AccordionItem>
+                    <AccordionItem value={"objc2"}>
+                        <AccordionHeader button={<Button appearance={"outline"}/>} icon={<ReadingListFilled/>}>
+                            <div className={"description"}><p><b>objc2</b></p><p>v0.5.2</p><p><i>(MIT)</i></p></div>
+                            <div className={"filler"}/>
+                            <Button appearance={"transparent"} icon={<FaGithub/>}
+                                    onClick={() => redirect(Repositories.Objc2)}/></AccordionHeader>
+                        <AccordionPanel>
+                            <Card className={"panel"}>
+                                <div className={"licenseText"}>
+                                    <b>MIT License</b>
+                                    <br/><br/>
+                                    Copyright (c) Steven Sheldon
+                                    <br/><br/>
+                                    Permission is hereby granted, free of charge, to any person obtaining a copy
+                                    of this software and associated documentation files (the "Software"), to deal
+                                    in the Software without restriction, including without limitation the rights
+                                    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                                    copies of the Software, and to permit persons to whom the Software is
+                                    furnished to do so, subject to the following conditions:
+                                    <br/><br/>
+                                    The above copyright notice and this permission notice shall be included in all
+                                    copies or substantial portions of the Software.
+                                    <br/><br/>
+                                    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+                                    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                                    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                                    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                                    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+                                    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+                                    SOFTWARE.
+                                </div>
+                            </Card>
+                        </AccordionPanel>
+                        <Divider inset={true}/>
+                    </AccordionItem>
+                    <AccordionItem value={"objc2-foundation"}>
+                        <AccordionHeader button={<Button appearance={"outline"}/>} icon={<ReadingListFilled/>}>
+                            <div className={"description"}><p><b>objc2-foundation</b></p><p>v0.2.2</p><p><i>(MIT)</i></p></div>
+                            <div className={"filler"}/>
+                            <Button appearance={"transparent"} icon={<FaGithub/>}
+                                    onClick={() => redirect(Repositories.Objc2Foundation)}/></AccordionHeader>
+                        <AccordionPanel>
+                            <Card className={"panel"}>
+                                <div className={"licenseText"}>
+                                    <b>MIT License</b>
+                                    <br/><br/>
+                                    Copyright (c) Steven Sheldon
+                                    <br/><br/>
+                                    Permission is hereby granted, free of charge, to any person obtaining a copy
+                                    of this software and associated documentation files (the "Software"), to deal
+                                    in the Software without restriction, including without limitation the rights
+                                    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                                    copies of the Software, and to permit persons to whom the Software is
+                                    furnished to do so, subject to the following conditions:
+                                    <br/><br/>
+                                    The above copyright notice and this permission notice shall be included in all
+                                    copies or substantial portions of the Software.
+                                    <br/><br/>
+                                    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+                                    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                                    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                                    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                                    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+                                    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+                                    SOFTWARE.
+                                </div>
+                            </Card>
+                        </AccordionPanel>
+                        <Divider inset={true}/>
+                    </AccordionItem>
+                    <AccordionItem value={"objc2-app-kit"}>
+                        <AccordionHeader button={<Button appearance={"outline"}/>} icon={<ReadingListFilled/>}>
+                            <div className={"description"}><p><b>objc2-app-kit</b></p><p>v0.2.2</p><p><i>(MIT)</i></p></div>
+                            <div className={"filler"}/>
+                            <Button appearance={"transparent"} icon={<FaGithub/>}
+                                    onClick={() => redirect(Repositories.Objc2AppKit)}/></AccordionHeader>
+                        <AccordionPanel>
+                            <Card className={"panel"}>
+                                <div className={"licenseText"}>
+                                    <b>MIT License</b>
+                                    <br/><br/>
+                                    Copyright (c) Steven Sheldon
+                                    <br/><br/>
+                                    Permission is hereby granted, free of charge, to any person obtaining a copy
+                                    of this software and associated documentation files (the "Software"), to deal
+                                    in the Software without restriction, including without limitation the rights
+                                    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                                    copies of the Software, and to permit persons to whom the Software is
+                                    furnished to do so, subject to the following conditions:
+                                    <br/><br/>
+                                    The above copyright notice and this permission notice shall be included in all
+                                    copies or substantial portions of the Software.
+                                    <br/><br/>
+                                    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+                                    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                                    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                                    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                                    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+                                    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+                                    SOFTWARE.
+                                </div>
+                            </Card>
+                        </AccordionPanel>
+                        <Divider inset={true}/>
+                    </AccordionItem>
+                    <AccordionItem value={"objc2-web-kit"}>
+                        <AccordionHeader button={<Button appearance={"outline"}/>} icon={<ReadingListFilled/>}>
+                            <div className={"description"}><p><b>objc2-web-kit</b></p><p>v0.2.2</p><p><i>(MIT)</i></p></div>
+                            <div className={"filler"}/>
+                            <Button appearance={"transparent"} icon={<FaGithub/>}
+                                    onClick={() => redirect(Repositories.Objc2WebKit)}/></AccordionHeader>
+                        <AccordionPanel>
+                            <Card className={"panel"}>
+                                <div className={"licenseText"}>
+                                    <b>MIT License</b>
+                                    <br/><br/>
+                                    Copyright (c) Steven Sheldon
+                                    <br/><br/>
+                                    Permission is hereby granted, free of charge, to any person obtaining a copy
+                                    of this software and associated documentation files (the "Software"), to deal
+                                    in the Software without restriction, including without limitation the rights
+                                    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                                    copies of the Software, and to permit persons to whom the Software is
+                                    furnished to do so, subject to the following conditions:
+                                    <br/><br/>
+                                    The above copyright notice and this permission notice shall be included in all
+                                    copies or substantial portions of the Software.
+                                    <br/><br/>
+                                    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+                                    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                                    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                                    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                                    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+                                    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+                                    SOFTWARE.
                                 </div>
                             </Card>
                         </AccordionPanel>

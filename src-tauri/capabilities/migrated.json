@@ -8,7 +8,8 @@
     "createWettkampf",
     "editor",
     "bugReport",
-    "licenseWindow"
+    "licenseWindow",
+    "pdfWindow"
   ],
   "permissions": [
     "core:default",

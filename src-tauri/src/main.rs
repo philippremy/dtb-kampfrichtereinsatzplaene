@@ -7,11 +7,8 @@
 use crate::types::{
     ApplicationError, FrontendStorage, Storage, UpdateAvailablePayload, UpdateProgressPayload,
 };
-use crate::ChromeFetcher::{Fetcher, FetcherOptions, Revision};
 use crate::MailImpl::{send_mail, MessageKind};
 use crate::FFI::{create_tables_docx, create_tables_pdf};
-use headless_chrome::types::PrintToPdfOptions;
-use headless_chrome::{Browser, LaunchOptions};
 use tauri::menu::{AboutMetadataBuilder, Menu, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri_plugin_updater::UpdaterExt;
 use std::collections::HashMap;
@@ -20,6 +17,7 @@ use std::panic::PanicHookInfo;
 use std::path::PathBuf;
 use std::process::{abort, Command};
 use std::sync::atomic::{AtomicBool, AtomicI8, AtomicU64, Ordering};
+use std::sync::{Arc, LazyLock};
 #[cfg(target_os = "linux")]
 use std::sync::Mutex;
 #[cfg(target_os = "linux")]
@@ -28,20 +26,24 @@ use std::{env, thread};
 use tauri::{AppHandle, Emitter, Manager, State, Wry};
 use tokio::time::sleep;
 
-mod ChromeFetcher;
 mod FFI;
 mod MailImpl;
 mod log;
-/// Declares the usage of crate-wide modules.
 mod types;
+mod PrintToPdfImpl;
 
 // Linux struct
 #[cfg(target_os = "linux")]
 pub struct DbusState(Mutex<Option<dbus::blocking::SyncConnection>>);
 
+// Force PlatformWebview to be Send
+struct PlatformWebViewWrapper {
+    inner: Option<tauri::webview::PlatformWebview>
+}
+unsafe impl Send for PlatformWebViewWrapper {}
+
 // Statics
 static mut SAVE_PATH: Option<String> = None;
-static mut CHROME_BIN: Option<PathBuf> = None;
 static LLVM_VER: &'static str = env!("VERGEN_RUSTC_LLVM_VERSION");
 static TARGET_TRIPLE: &'static str = env!("VERGEN_CARGO_TARGET_TRIPLE");
 static GIT_COMMIT: &'static str = env!("VERGEN_GIT_SHA");
@@ -52,6 +54,15 @@ static mut STDERR_FILE: Option<String> = None;
 static mut MAINWINDOW_LOADED: AtomicBool = AtomicBool::new(false);
 static mut UPDATE_REQUESTED: AtomicI8 = AtomicI8::new(0);
 static mut UPDATE_PROGRESS: AtomicU64 = AtomicU64::new(0);
+static PLATFORM_WEBVIEW: LazyLock<Arc<tokio::sync::Mutex<PlatformWebViewWrapper>>> = LazyLock::new(|| {
+    Arc::new(
+        tokio::sync::Mutex::new(
+            PlatformWebViewWrapper {
+                inner: None
+            }
+        )
+    )
+});
 
 #[tauri::command]
 fn update_mainwindow_loading_state(visible: bool) {
@@ -671,93 +682,13 @@ async fn sync_to_backend_and_create_pdf(
         return Ok(library_code);
     }
 
-    // SAFETY: This will only be fetched from different window instances, no race conditions
-    // are to be expected. No human is that fast.
-    let chromium_binary = unsafe { CHROME_BIN.clone() };
-
-    // If this is none, that is a very bad sign. Maybe a race condition nobody saw in advance :(?
-    if chromium_binary.is_none() {
-        return Ok(ApplicationError::ChromiumBinaryIsUnexpectedlyNone);
-    }
-
-    // Now use our local chromium install to generate the pdf
-    let browser = match Browser::new(
-        LaunchOptions::default_builder()
-            .headless(true)
-            .enable_logging(true)
-            .path(chromium_binary)
-            .build()
-            .unwrap(),
-    ) {
-        Ok(browser) => browser,
-        Err(err) => {
-            eprintln!("Could not open a Chromium browser instance: {:?}", err);
-            return Ok(ApplicationError::BrowserCouldNotBeBuild);
-        }
-    };
-    let tab = match browser.new_tab() {
-        Ok(tab) => tab,
-        Err(err) => {
-            eprintln!(
-                "Could not create a new tab in the Chromium browser instance: {:?}",
-                err
-            );
-            return Ok(ApplicationError::NewTabCouldNotBeCreated);
-        }
-    };
-
     // Fetch the generated html file
     let generated_html = filepath.clone().replace(".pdf", "_temp.html");
     let generated_docx = filepath.clone().replace(".pdf", "_temp.docx");
 
-    // Navigate to it
-    let mut generated_html_tab =
-        match tab.navigate_to(&format!["file://{}", generated_html.as_str()]) {
-            Ok(tab) => tab,
-            Err(err) => {
-                eprintln!(
-                "Could not navigate to the specified URL in the Chromium browser instance: {:?}",
-                err
-            );
-                return Ok(ApplicationError::NavigationToGeneratedHTMLFileFailed);
-            }
-        };
-
-    // Wait for navigation to finish
-    generated_html_tab = match generated_html_tab.wait_until_navigated() {
-        Ok(tab) => tab,
-        Err(err) => {
-            eprintln!("Could not wait until the navigation to the specified URL in the Chromium browser instance finished: {:?}", err);
-            return Ok(ApplicationError::WaitingForNavigationFailed);
-        }
-    };
-
-    // Print to pdf and get the binary data
-    let mut pdf_options = PrintToPdfOptions::default();
-    pdf_options.paper_height = Some(11.7);
-    pdf_options.paper_width = Some(8.3);
-    pdf_options.display_header_footer = Some(false);
-    pdf_options.margin_bottom = Some(0.0);
-    pdf_options.margin_left = Some(0.0);
-    pdf_options.margin_right = Some(0.0);
-    pdf_options.margin_top = Some(0.0);
-    pdf_options.scale = Some(1.0);
-    let pdf_data = match generated_html_tab.print_to_pdf(Some(pdf_options)) {
-        Ok(data) => data,
-        Err(err) => {
-            eprintln!("Could not print the page to a PDF and acquire the data vector from the Chromium browser instance: {:?}", err);
-            return Ok(ApplicationError::PDFGenerationInChromiumFailed);
-        }
-    };
-
-    // Write the pdf contents to file!
-    match std::fs::write(filepath.clone(), pdf_data) {
-        Ok(()) => {}
-        Err(err) => {
-            eprintln!("Could not write the generated PDF contents to the specified PDF file on the hard disk: {:?}", err);
-            return Ok(ApplicationError::WritingPDFDataToDiskFailed);
-        }
-    }
+    // Get the shared PDF View
+    let platform_webview = PLATFORM_WEBVIEW.lock().await;
+    let errno = platform_webview.print_pdf(PathBuf::from(generated_html.clone()), PathBuf::from(filepath.clone()));
 
     // Delete temporary files
     match std::fs::remove_file(generated_html) {
@@ -775,6 +706,10 @@ async fn sync_to_backend_and_create_pdf(
             println!("Could not remove temporary generated DOCX file: {:?}", err);
             return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed);
         }
+    }
+
+    if errno != ApplicationError::NoError {
+        return Ok(errno);
     }
 
     return Ok(ApplicationError::NoError);
@@ -921,121 +856,6 @@ async fn import_wk_file_and_open_editor(
     }
 
     return Ok(ApplicationError::NoError);
-}
-
-// Function for checking if we have a chrome binary installed on the system
-#[tauri::command]
-fn check_for_chrome_binary() -> bool {
-    match directories::BaseDirs::new() {
-        None => {
-            panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.")
-        }
-        Some(dirs) => {
-            let appdata_roaming_dir = dirs.data_dir();
-            let application_externals_dir = appdata_roaming_dir
-                .join("de.philippremy.dtb-kampfrichtereinsatzplaene")
-                .join("Externals");
-            #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-            let fetcher_options = FetcherOptions::new()
-                .with_allow_standard_dirs(false)
-                .with_allow_download(false)
-                .with_install_dir(Some(application_externals_dir))
-                .with_revision(Revision::Specific("1294836".to_string()));
-            #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
-            let fetcher_options = FetcherOptions::new()
-                .with_allow_standard_dirs(false)
-                .with_allow_download(false)
-                .with_install_dir(Some(application_externals_dir))
-                .with_revision(Revision::Specific("1294832".to_string()));
-            #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-            let fetcher_options = FetcherOptions::new()
-                .with_allow_standard_dirs(false)
-                .with_allow_download(false)
-                .with_install_dir(Some(application_externals_dir))
-                .with_revision(Revision::Specific("1294832".to_string()));
-            #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-            let fetcher_options = FetcherOptions::new()
-                .with_allow_standard_dirs(false)
-                .with_allow_download(false)
-                .with_install_dir(Some(application_externals_dir))
-                .with_revision(Revision::Specific("1294832".to_string()));
-            let fetcher = Fetcher::new(fetcher_options);
-            let fetched_instance = match fetcher.fetch() {
-                Ok(path) => path,
-                Err(err) => {
-                    eprintln!("Could not find a suitable Chromium version. This is recoverable (and non-fatal) and the user will be prompted to download one or all Chromium related functionality (i.e., PDFs) will be disabled. Error: {:?}", err);
-                    return false;
-                }
-            };
-            // SAFETY: This will only be fetched from different window instances, no race conditions
-            // are to be expected. No human is that fast.
-            unsafe { CHROME_BIN = Some(fetched_instance.clone()) };
-        }
-    }
-
-    return true;
-}
-
-#[tauri::command]
-async fn download_chrome() -> Result<ApplicationError, ()> {
-    match directories::BaseDirs::new() {
-        None => {
-            panic!("Could not get the Windows Base Dirs. Important files will be missing and we cannot get them from anywhere else, so we exit here.")
-        }
-        Some(dirs) => {
-            let appdata_roaming_dir = dirs.data_dir();
-            let application_externals_dir = appdata_roaming_dir
-                .join("de.philippremy.dtb-kampfrichtereinsatzplaene")
-                .join("Externals");
-            #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-            let fetcher_options = FetcherOptions::new()
-                .with_allow_standard_dirs(false)
-                .with_allow_download(true)
-                .with_install_dir(Some(application_externals_dir))
-                .with_revision(Revision::Specific("1294836".to_string()));
-            #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
-            let fetcher_options = FetcherOptions::new()
-                .with_allow_standard_dirs(false)
-                .with_allow_download(true)
-                .with_install_dir(Some(application_externals_dir))
-                .with_revision(Revision::Specific("1294832".to_string()));
-            #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-            let fetcher_options = FetcherOptions::new()
-                .with_allow_standard_dirs(false)
-                .with_allow_download(true)
-                .with_install_dir(Some(application_externals_dir))
-                .with_revision(Revision::Specific("1294832".to_string()));
-            #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-            let fetcher_options = FetcherOptions::new()
-                .with_allow_standard_dirs(false)
-                .with_allow_download(true)
-                .with_install_dir(Some(application_externals_dir))
-                .with_revision(Revision::Specific("1294832".to_string()));
-            let fetcher = Fetcher::new(fetcher_options);
-            let fetched_instance = match fetcher.fetch() {
-                Ok(path) => path,
-                Err(err) => {
-                    eprintln!("Could not fetch a suitable Chromium version. This is non-recoverable (but non-fatal) and all Chromium related functionality (i.e., PDFs) will be disabled. Error: {:?}", err);
-                    return Ok(ApplicationError::ChromeDownloadError);
-                }
-            };
-            // SAFETY: This will only be fetched from different window instances, no race conditions
-            // are to be expected. No human is that fast.
-            unsafe { CHROME_BIN = Some(fetched_instance.clone()) };
-        }
-    }
-    return Ok(ApplicationError::NoError);
-}
-
-#[tauri::command]
-fn check_if_pdf_is_available() -> bool {
-    unsafe {
-        if CHROME_BIN.is_none() {
-            return false;
-        } else {
-            return true;
-        }
-    }
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -1310,12 +1130,25 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(Storage::default())
-        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, check_for_chrome_binary, download_chrome, check_if_pdf_is_available, show_item_in_folder, open_bug_reporter, send_mail_from_frontend, update_mainwindow_loading_state, update_app])
+        .invoke_handler(tauri::generate_handler![update_storage_data, create_wettkampf, sync_wk_data_and_open_editor, get_wk_data_to_frontend, sync_to_backend_and_save, sync_to_backend_and_create_docx, sync_to_backend_and_create_pdf, import_wk_file_and_open_editor, show_item_in_folder, open_bug_reporter, send_mail_from_frontend, update_mainwindow_loading_state, update_app])
         .setup(|app| {
             let handle = app.handle().clone();
 
             // Set App Menu
             app.set_menu(build_menus(MenuKind::Default, &handle)).unwrap();
+
+            // Build the PDF Window
+            let pdf_window = tauri::WebviewWindowBuilder::new(&handle, "pdfWindow", tauri::WebviewUrl::App(PathBuf::from("blank.html")))
+                .visible(false)
+                .accept_first_mouse(false)
+                .build()
+                .unwrap();
+            pdf_window.with_webview(|webview|{
+
+                let mut lockGuard = PLATFORM_WEBVIEW.blocking_lock();
+                lockGuard.inner = Some(webview);
+
+            }).unwrap();
 
             tauri::async_runtime::spawn(async move {
 
@@ -1447,8 +1280,25 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .unwrap()
-        .run(|_app_handle, _ev| {
-
+        .run(|app_handle, ev| {
+            match ev {
+                tauri::RunEvent::WindowEvent { label, event , .. } => {
+                    match event {
+                        tauri::WindowEvent::CloseRequested { .. } => {
+                            if label.as_str() != "pdfWindow" && app_handle.windows().len() < 3 {
+                                app_handle.exit(0);
+                            }
+                        },
+                        tauri::WindowEvent::Destroyed => {
+                            if label.as_str() != "pdfWindow" && app_handle.windows().len() == 1 {
+                                app_handle.exit(0);
+                            }
+                        },
+                        _ => {},
+                    }
+                },
+                _ => {},
+            }
         });
 
 }
