@@ -5,8 +5,8 @@ import "./CreateWettkampf.css";
 import dtbLogo from "./assets/dtb-logo.svg";
 import dtbLogoLight from "./assets/dtb-logo-light.svg";
 import { CalendarFilled, PersonFilled, PinFilled, TimePickerFilled, TrophyFilled } from "@fluentui/react-icons";
-import { invoke } from "@tauri-apps/api";
-import { getCurrent } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { FrontendStorage } from "./Editor.tsx";
 
 function CreateWettkampf() {
@@ -135,7 +135,7 @@ function CreateWettkampf() {
     };
     invoke("sync_wk_data_and_open_editor", {data: wkData}).then((result) => {
       if(result === "NoError") {
-        const thisWindow = getCurrent();
+        const thisWindow = getCurrentWebviewWindow();
         thisWindow.close().then(() => {});
       }
       showBackendError(String(result));

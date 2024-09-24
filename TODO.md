@@ -37,13 +37,18 @@
 - [x] Fix compile time error when not providing mail credentials via environment secrets
 - [x] Fix runtime `dyld` Swift zlib error on macOS x86_64 when using the wrong linker in `ilc` (use `ld_classic`)
 
+### To-Do's for 1.3.0
+- [x] Update to Tauri 2.0
+- [x] Implement Copy, Cut and Paste functionality in WebView contexts
+- [x] Generate Menus using a function --> Reduce loc
+- [x] Remove Chromium dependency
+- [x] Generate PDFs using Tauri's Webview Environment
+- [x] Implement custom About menu using a WebView window --> Enables this functionality on Windows
+
 ### To-Do's for 1.X.0
 - [ ] Implement missing menus
 - [ ] Refactor frontend syncing, so we don't have x million loc for the same thing. Makes compiling slow and we could just #[inline(always)] this
-- [ ] Generate Menus using a function --> Reduce loc
 - [ ] Create algorithm for inserting Judges based on an exported list from GymNet
-- [ ] Implement Copy, Cut and Paste functionality in WebView contexts
-- [ ] Implement custom About menu using a WebView window --> Enables this functionality on Windows
 
 ### Possible, but not planned as of now
 - [ ] Implement a sanitizing algorithm which sanitizes all templates (i.e., makes sure that all Text is in one Run)

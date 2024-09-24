@@ -4,14 +4,14 @@ import "./App.css";
 // This error is a straight-up lie
 import dtbLogo from "./assets/dtb-logo.svg";
 import dtbLogoLight from "./assets/dtb-logo-light.svg";
-import { FluentProvider, webLightTheme, webDarkTheme, Title2, Image, Button, useToastController, Toast, ToastTitle, ToastBody, Toaster, Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions, DialogTrigger, Spinner, Field, ProgressBar } from "@fluentui/react-components";
+import { FluentProvider, webLightTheme, webDarkTheme, Title2, Image, Button, useToastController, Toast, ToastTitle, ToastBody, Toaster, Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions, DialogTrigger, Field, ProgressBar } from "@fluentui/react-components";
 import { FolderOpenFilled, FormNewFilled } from "@fluentui/react-icons";
-import { invoke } from "@tauri-apps/api";
-import { open } from "@tauri-apps/api/dialog";
-import { getCurrent } from "@tauri-apps/api/window";
+import { open } from "@tauri-apps/plugin-dialog";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { marked } from "marked";
-import { relaunch } from "@tauri-apps/api/process";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 function App() {
   function parseMarkdown(body: string) {
@@ -144,7 +144,7 @@ function App() {
   async function createWettkampf() {
     invoke("create_wettkampf").then((result) => {
       if (result === "NoError") {
-        const thisWindow = getCurrent();
+        const thisWindow = getCurrentWebviewWindow();
         thisWindow.close();
         return;
       }
@@ -155,71 +155,7 @@ function App() {
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Check for a local chrome installation on startup
-  useEffect(() => {
-    async function call() {
-      // We do this by invoking the backend
-      let backendResponse: boolean = await invoke("check_for_chrome_binary", {});
-      if (backendResponse) {
-        return;
-      } else {
-        setDialogOpen(true);
-      }
-    }
-    call();
-  }, []);
-
   const [buttonsDisabled, setButtonsDisabled] = useState(false);
-  const downloadToastId = useId();
-
-  async function downloadChrome() {
-    // Disable the dialog
-    setDialogOpen(false);
-
-    // Disable both buttons
-    setButtonsDisabled(true);
-
-    // Spawn a spinning toaster
-    dispatchToast(
-      <Toast>
-        <ToastTitle media={<Spinner size="tiny" />}>
-          Chrome wird heruntergeladen...
-        </ToastTitle>
-      </Toast>,
-      { timeout: -1, toastId: downloadToastId },
-    );
-
-    // Call the frontend to download chrome
-    invoke("download_chrome", {}).then((response) => {
-      if (response != "NoError") {
-        updateToast({
-          toastId: downloadToastId,
-          timeout: 3000,
-          content: (
-            <Toast>
-              <ToastTitle>
-                Chrome konnte nicht heruntergeladen werden: {response as string}
-              </ToastTitle>
-            </Toast>
-          ),
-          intent: "error",
-        });
-        setButtonsDisabled(false);
-      } else {
-        updateToast({
-          toastId: downloadToastId,
-          timeout: 3000,
-          content: (
-            <Toast>
-              <ToastTitle>Chrome erfolgreich heruntergeladen!</ToastTitle>
-            </Toast>
-          ),
-          intent: "success",
-        });
-        setButtonsDisabled(false);
-      }
-    });
-  }
 
   // Toaster Stuff
   const { dispatchToast, updateToast } = useToastController();
@@ -242,9 +178,21 @@ function App() {
       if (file === null) {
         return;
       } else if (Array.isArray(file)) {
-        invoke("import_wk_file_and_open_editor", { filepath: file[0] }).then(
+        invoke("import_wk_file_and_open_editor", { filepath: file[0].path }).then(
           (response) => {
             if (response === "NoError") {
+              return;
+            } else {
+              showBackendError(response as string);
+            }
+          },
+        );
+      } else if (typeof file == "object") {
+        invoke("import_wk_file_and_open_editor", { filepath: file.path }).then(
+          (response) => {
+            if (response === "NoError") {
+              const thisWindow = getCurrentWebviewWindow();
+              thisWindow.close().then(() => {});
               return;
             } else {
               showBackendError(response as string);
@@ -255,7 +203,7 @@ function App() {
         invoke("import_wk_file_and_open_editor", { filepath: file }).then(
           (response) => {
             if (response === "NoError") {
-              const thisWindow = getCurrent();
+              const thisWindow = getCurrentWebviewWindow();
               thisWindow.close().then(() => {});
               return;
             } else {
@@ -331,7 +279,7 @@ function App() {
                   Nicht herunterladen
                 </Button>
               </DialogTrigger>
-              <Button appearance={"primary"} onClick={() => downloadChrome()}>
+              <Button appearance={"primary"}>
                 Herunterladen
               </Button>
             </DialogActions>

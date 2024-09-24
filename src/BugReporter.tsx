@@ -1,9 +1,9 @@
 import { Body1Strong, Button, Caption1Strong, Checkbox, Divider, Field, FluentProvider, Input, Spinner, Textarea, webDarkTheme, webLightTheme } from "@fluentui/react-components";
-import { getCurrent } from "@tauri-apps/api/window";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import React from "react";
 import "./BugReporter.css";
-import { invoke } from "@tauri-apps/api";
 import { LaptopPersonFilled, MailboxFilled, TargetFilled, SendFilled, ErrorCircleFilled } from "@fluentui/react-icons";
+import { invoke } from "@tauri-apps/api/core";
 
 export default class BugReporter extends React.Component<{}, {isLight: boolean, title: string | null, name: string | null , mail: string | null, subject: string, message: string, sendLogs: boolean, loadingState: "initial" | "loading" | "error", errorText: string | null, errorTextClass: "none" | "errorText" | "successText"}> {
 
@@ -59,7 +59,7 @@ export default class BugReporter extends React.Component<{}, {isLight: boolean, 
     }
 
     async setTitle() {
-        this.setState({title: await getCurrent().title()});
+        this.setState({title: await getCurrentWebviewWindow().title()});
     }
 
     render() {
@@ -91,7 +91,7 @@ export default class BugReporter extends React.Component<{}, {isLight: boolean, 
                     <Caption1Strong className={this.state.errorTextClass}>{this.state.errorText}</Caption1Strong>
                     <div className="spacer"></div>
                     <Button appearance="primary" onClick={() => this.submit()} icon={this.buttonIcon()} disabledFocusable={this.state.loadingState !== "initial"} >Absenden</Button>
-                    <Button appearance="secondary" onClick={() => getCurrent().close()} disabledFocusable={this.state.loadingState !== "initial"} >Abbrechen</Button>
+                    <Button appearance="secondary" onClick={() => getCurrentWebviewWindow().close()} disabledFocusable={this.state.loadingState !== "initial"} >Abbrechen</Button>
                   </div>
                 </div>
               </FluentProvider>

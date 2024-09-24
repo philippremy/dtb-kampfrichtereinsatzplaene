@@ -1,13 +1,14 @@
 import { Button, Caption2, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, DialogTrigger, Field, FluentProvider, Input, Link, Menu, MenuButton, MenuButtonProps, MenuItem, MenuList, MenuPopover, MenuTrigger, Spinner, SplitButton, Subtitle2, Text, Toast, ToastBody, Toaster, ToastFooter, ToastIntent, ToastTitle, ToastTrigger, useToastController, webDarkTheme, webLightTheme, Tooltip, Divider } from "@fluentui/react-components";
 import { AddFilled, CalendarFilled, CheckmarkFilled, ChevronDownRegular, DocumentFilled, ErrorCircleFilled, PenFilled, PersonFilled, PinFilled, SaveFilled, TimePickerFilled, TrophyFilled } from "@fluentui/react-icons";
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import React, { useEffect, useId, useState } from "react";
 import "./Editor.css";
 import { v4 as uuidv4 } from 'uuid';
 import KampfgerichteRenderer from "./KampfgerichteRenderer";
-import { ask, save } from "@tauri-apps/api/dialog";
-import { getCurrent } from "@tauri-apps/api/window";
+import { ask, save } from "@tauri-apps/plugin-dialog";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import ReplacementJudges from "./ReplacementJudges.tsx";
+import { listen } from "@tauri-apps/api/event";
 
 // Kampfrichter Interface
 export type Kampfrichter = {
@@ -58,21 +59,6 @@ function Editor() {
     async function showInFolder(path: string) {
         await invoke('show_item_in_folder', {path});
     }
-
-    // State for checking if PDF printing is available
-    const [pdfIsDisabled, setPdfIsDisabled] = useState(true);
-
-    // Effect for checking if PDF printing is available
-    useEffect(() => {
-        invoke("check_if_pdf_is_available", {}).then((response) => {
-            let responseCast = response as boolean;
-            if(responseCast) {
-                setPdfIsDisabled(false);
-            } else {
-                setPdfIsDisabled(true);
-            }
-        });
-    }, []);
 
     // Theme thing :)
     useEffect(() => {
@@ -197,7 +183,7 @@ function Editor() {
             } else {
                 updateToastWithID("saveToast", "success", "Speichern erfolgreich", "Der Wettkampf wurde gespeichert.", <CheckmarkFilled />, 3000, <Link onClick={() => {showInFolder(path)}}>Im Explorer anzeigen</Link>);
                 setLastSavePath(path);
-                let currentWindow = getCurrent();
+                let currentWindow = getCurrentWebviewWindow();
                 currentWindow.setTitle(frontendStorage.wk_name + " (gespeichert)").then(() => {});
             }
         });
@@ -342,7 +328,7 @@ function Editor() {
 
         temp_storage.changedByDoubleHook = true;
         setFrontendStorage(Object.assign({}, temp_storage));
-        let currentWindow = getCurrent();
+        let currentWindow = getCurrentWebviewWindow();
         if(temp_storage.wk_name !== "") {
             currentWindow.setTitle(temp_storage.wk_name + " (nicht gespeichert)").then(() => {});
         }
@@ -451,6 +437,7 @@ function Editor() {
 
     // Function to sync with backend and create the plans
     function syncWithBackendAndCreate(path: string, type: string) {
+        setLastPlanSavePath(path);
         displayToast("createToast", "Bitten warten", "Einsatzplan wird erstellt...", <Spinner size="tiny" />, -1);
         if(type === "docx") {
             invoke("sync_to_backend_and_create_docx", {frontendstorage: frontendStorage, filepath: path}).then((response) => {
@@ -462,8 +449,10 @@ function Editor() {
             });
         } else if(type === "pdf") {
             invoke("sync_to_backend_and_create_pdf", {frontendstorage: frontendStorage, filepath: path}).then((response) => {
-                if(response !== "NoError") {
+                if(response !== "NoError" && response !== "WaitingForWindowsPDFResult") {
                     updateToastWithID("createToast", "error", "Fehler", "Ein Fehler ist aufgetreten: " +  response, <ErrorCircleFilled />, 3000);
+                } else if(response === "WaitingForWindowsPDFResult") {
+                    return;
                 } else {
                     updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000, <Link onClick={() => {showInFolder(path)}}>Im Explorer anzeigen</Link>);
                 }
@@ -525,8 +514,15 @@ function Editor() {
     // Everything for the replacement judges
     const [editorExists, setEditorExists] = useState(false);
 
-    // State for keeping track if the hintPopup is visible
-    const [hintVisible, setHintVisible] = useState(false);
+    // Listen for the event emitted by the Windows PDF Creation Routine
+    const [lastPlanSavePath, setLastPlanSavePath] = useState<string>("");
+    listen<{ operation_succeeded: boolean }>("pdfCreationFinishedWindows", (response) => {
+        if(!response.payload.operation_succeeded) {
+            updateToastWithID("createToast", "error", "Fehler", "Ein Fehler ist aufgetreten. Bitte Logs überprüfen.", <ErrorCircleFilled />, 3000);
+        } else {
+            updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000, <Link onClick={() => {showInFolder(lastPlanSavePath)}}>Im Explorer anzeigen</Link>);
+        }
+    }).then(() => {});
 
     return (
         <FluentProvider theme={isLight ? webLightTheme : webDarkTheme}>
@@ -560,9 +556,7 @@ function Editor() {
                         <MenuPopover>
                             <MenuList>
                                 <MenuItem onClick={() => createPlans("docx")}>Als Word-Datei</MenuItem>
-                                <Tooltip content={"Chromium ist nicht installiert. Die Funktion ist deaktiviert."} relationship={"description"} positioning={"before"} withArrow={true} visible={pdfIsDisabled && hintVisible} onVisibleChange={(_ev, data) => setHintVisible(data.visible)} >
-                                    <MenuItem onClick={() => createPlans("pdf")} disabled={pdfIsDisabled}>Als PDF</MenuItem>
-                                </Tooltip>
+                                <MenuItem onClick={() => createPlans("pdf")}>Als PDF</MenuItem>
                             </MenuList>
                         </MenuPopover>
                     </Menu>
