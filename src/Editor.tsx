@@ -8,6 +8,7 @@ import KampfgerichteRenderer from "./KampfgerichteRenderer";
 import { ask, save } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import ReplacementJudges from "./ReplacementJudges.tsx";
+import { listen } from "@tauri-apps/api/event";
 
 // Kampfrichter Interface
 export type Kampfrichter = {
@@ -436,6 +437,7 @@ function Editor() {
 
     // Function to sync with backend and create the plans
     function syncWithBackendAndCreate(path: string, type: string) {
+        setLastPlanSavePath(path);
         displayToast("createToast", "Bitten warten", "Einsatzplan wird erstellt...", <Spinner size="tiny" />, -1);
         if(type === "docx") {
             invoke("sync_to_backend_and_create_docx", {frontendstorage: frontendStorage, filepath: path}).then((response) => {
@@ -447,8 +449,10 @@ function Editor() {
             });
         } else if(type === "pdf") {
             invoke("sync_to_backend_and_create_pdf", {frontendstorage: frontendStorage, filepath: path}).then((response) => {
-                if(response !== "NoError") {
+                if(response !== "NoError" && response !== "WaitingForWindowsPDFResult") {
                     updateToastWithID("createToast", "error", "Fehler", "Ein Fehler ist aufgetreten: " +  response, <ErrorCircleFilled />, 3000);
+                } else if(response === "WaitingForWindowsPDFResult") {
+                    return;
                 } else {
                     updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000, <Link onClick={() => {showInFolder(path)}}>Im Explorer anzeigen</Link>);
                 }
@@ -509,6 +513,16 @@ function Editor() {
 
     // Everything for the replacement judges
     const [editorExists, setEditorExists] = useState(false);
+
+    // Listen for the event emitted by the Windows PDF Creation Routine
+    const [lastPlanSavePath, setLastPlanSavePath] = useState<string>("");
+    listen<{ operation_succeeded: boolean }>("pdfCreationFinishedWindows", (response) => {
+        if(!response.payload.operation_succeeded) {
+            updateToastWithID("createToast", "error", "Fehler", "Ein Fehler ist aufgetreten. Bitte Logs überprüfen.", <ErrorCircleFilled />, 3000);
+        } else {
+            updateToastWithID("createToast", "success", "Speichern erfolgreich", "Der Einsatzplan wurde erfolgreich gespeichert.", <CheckmarkFilled />, 3000, <Link onClick={() => {showInFolder(lastPlanSavePath)}}>Im Explorer anzeigen</Link>);
+        }
+    }).then(() => {});
 
     return (
         <FluentProvider theme={isLight ? webLightTheme : webDarkTheme}>
