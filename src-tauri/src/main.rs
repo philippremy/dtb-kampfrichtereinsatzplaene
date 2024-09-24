@@ -585,6 +585,123 @@ async fn sync_to_backend_and_create_docx(
     return Ok(create_tables_docx(storage.inner(), PathBuf::from(filepath)).unwrap());
 }
 
+// Windows requires this function to run asynchronously!
+#[cfg(target_os = "macos")]
+#[tauri::command]
+async fn sync_to_backend_and_create_pdf(
+    frontendstorage: FrontendStorage,
+    filepath: String,
+    storage: State<'_, Storage>,
+    app_handle: AppHandle
+) -> Result<ApplicationError, ()> {
+    match storage.wk_name.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_name.clone();
+            drop(guard);
+        }
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
+    }
+
+    match storage.wk_place.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_place;
+            drop(guard);
+        }
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
+    }
+
+    match storage.wk_date.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_date;
+            drop(guard);
+        }
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
+    }
+
+    match storage.wk_judgesmeeting_time.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_judgesmeeting_time;
+            drop(guard);
+        }
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
+    }
+
+    match storage.wk_responsible_person.lock() {
+        Ok(mut guard) => {
+            *guard = frontendstorage.wk_responsible_person;
+            drop(guard);
+        }
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
+    }
+
+    match storage.wk_replacement_judges.lock() {
+        Ok(mut guard) => {
+            *guard = match frontendstorage.wk_replacement_judges {
+                Some(map) => map,
+                None => Vec::new(),
+            };
+            drop(guard);
+        }
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
+    }
+
+    match storage.wk_judgingtables.lock() {
+        Ok(mut guard) => {
+            *guard = match frontendstorage.wk_judgingtables {
+                Some(map) => map,
+                None => HashMap::new(),
+            };
+            drop(guard);
+        }
+        Err(err) => {
+            eprintln!("Failed to acquire lock of mutex: {:?}", err);
+            return Ok(ApplicationError::MutexPoisonedError);
+        }
+    }
+
+    // Process backend library docx and html
+    let library_code = create_tables_pdf(storage.inner(), PathBuf::from(filepath.clone())).unwrap();
+
+    // Check if this succeeded.
+    if library_code != ApplicationError::NoError {
+        return Ok(library_code);
+    }
+
+    // Fetch the generated html file
+    let generated_html = filepath.clone().replace(".pdf", "_temp.html");
+    let generated_docx = filepath.clone().replace(".pdf", "_temp.docx");
+
+    // Get the shared PDF View
+    let platform_webview = PLATFORM_WEBVIEW.lock().await;
+    let errno = platform_webview.print_pdf(PathBuf::from(generated_html.clone()), PathBuf::from(filepath.clone()), app_handle, generated_docx, generated_html);
+
+    if errno != ApplicationError::NoError {
+        return Ok(errno);
+    }
+
+    return Ok(ApplicationError::NoError);
+}
+
+// Windows requires this function to run synchronously!
+#[cfg(target_os = "windows")]
 #[tauri::command]
 fn sync_to_backend_and_create_pdf(
     frontendstorage: FrontendStorage,
