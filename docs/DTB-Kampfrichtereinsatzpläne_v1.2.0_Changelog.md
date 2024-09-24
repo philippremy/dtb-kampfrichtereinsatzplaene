@@ -1,4 +1,4 @@
-﻿## DTB Kampfrichtereinsatzpläne v1.2.0
+## DTB Kampfrichtereinsatzpläne v1.2.0
 
 Eine neue Version ist verfügbar.
 
