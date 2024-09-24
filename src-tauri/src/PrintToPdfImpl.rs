@@ -1,10 +1,15 @@
+#[allow(unused_imports)]
+
 use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
+
 use crate::{types::ApplicationError, PlatformWebViewWrapper};
 
 #[cfg(target_os = "macos")]
 impl PlatformWebViewWrapper {
 
-    pub(crate) fn print_pdf(&self, html_file_path: PathBuf, pdf_output_path: PathBuf) -> ApplicationError {
+    pub(crate) fn print_pdf(&self, html_file_path: PathBuf, pdf_output_path: PathBuf, _app_handle: AppHandle, generated_docx: String, generated_html: String) -> ApplicationError {
 
         use objc2::{runtime::ProtocolObject, ClassType};
         use objc2_app_kit::{NSPrintInfo, NSPrintJobDisposition, NSPrintJobSavingURL, NSPrintSaveJob};
@@ -65,6 +70,22 @@ impl PlatformWebViewWrapper {
             }
         }
 
+        // Delete temporary files
+        match std::fs::remove_file(generated_html) {
+            Ok(()) => {}
+            Err(err) => {
+                eprintln!("Could not remove temporary generated HTML file: {:?}", err);
+            }
+        }
+
+        // Delete temporary files
+        match std::fs::remove_file(generated_docx) {
+            Ok(()) => {}
+            Err(err) => {
+                println!("Could not remove temporary generated DOCX file: {:?}", err);
+            }
+        }
+
         return ApplicationError::NoError;
 
     }
@@ -72,11 +93,106 @@ impl PlatformWebViewWrapper {
 }
 
 #[cfg(target_os = "windows")]
+#[derive(Clone, Serialize, Deserialize)]
+struct PdfCreationResponseWin {
+    operation_succeeded: bool
+}
+
+#[cfg(target_os = "windows")]
 impl PlatformWebViewWrapper {
 
-    pub(crate) fn print_pdf(&self, html_file_path: PathBuf, pdf_output_path: PathBuf) -> ApplicationError {
+    pub(crate) fn print_pdf(&self, html_file_path: PathBuf, pdf_output_path: PathBuf, app_handle: AppHandle, generated_docx: String, generated_html: String) -> ApplicationError {
 
-        return ApplicationError::NoError;
+        use tauri::Emitter;
+        use windows_core::Interface;
+        use webview2_com::{pwstr_from_str, Microsoft::Web::WebView2::Win32::{ICoreWebView2Environment6, ICoreWebView2_2, ICoreWebView2_7}, NavigationCompletedEventHandler, PrintToPdfCompletedHandler};
+        use windows::Win32::System::WinRT::EventRegistrationToken;
+
+        unsafe {
+
+            // Get the WebView
+            if let Some(platform_webview) = &self.inner {
+
+                // Fetch the WebViews
+                let core_webview = platform_webview.controller().CoreWebView2().unwrap();
+                let core_webview_7: ICoreWebView2_7 = core_webview.cast::<ICoreWebView2_7>().unwrap();
+
+                // Fetch the environment
+                let core_webview_2: ICoreWebView2_2 = core_webview.cast::<ICoreWebView2_2>().unwrap();
+                let webview_environment = core_webview_2.Environment().unwrap();
+                let webview_enviornment_6: ICoreWebView2Environment6 = webview_environment.cast::<ICoreWebView2Environment6>().unwrap();
+
+                // Navigate to the local HTML
+                let mut event_token: windows::Win32::System::WinRT::EventRegistrationToken = EventRegistrationToken { value: 0 };
+                let navigation_event_handler = NavigationCompletedEventHandler::create(Box::new(move |_, _| {
+
+                    // Continue in here, the completion handler runs on the same thread
+                    // and waiting atomically will cause a deadlock
+                
+                    // Generate PDF Printing Options
+                    let print_settings = webview_enviornment_6.CreatePrintSettings().unwrap();
+                    print_settings.SetMarginBottom(0.0).unwrap();
+                    print_settings.SetMarginTop(0.0).unwrap();
+                    print_settings.SetMarginLeft(0.0).unwrap();
+                    print_settings.SetMarginRight(0.0).unwrap();
+                    print_settings.SetShouldPrintHeaderAndFooter(false).unwrap();
+                    print_settings.SetShouldPrintSelectionOnly(false).unwrap();
+                    print_settings.SetPageHeight(11.67).unwrap();
+                    print_settings.SetPageWidth(8.27).unwrap();
+
+                    // Generate PCWSTR
+                    let out_pcwstr = pwstr_from_str(pdf_output_path.to_str().unwrap());
+
+                    // Clone AppHandle to pass further down the callback chain
+                    let app_handle_inner_box = app_handle.clone();
+                    let generated_docx_inner_box = generated_docx.clone();
+                    let generated_html_inner_box = generated_html.clone();
+
+                    // Generate Completion Handler
+                    let print_event_handler = PrintToPdfCompletedHandler::create(Box::new(move |result, success| {
+
+                        // Print error, if we errored
+                        if !success {
+                            eprintln!("Failed to save PDF: HWResult was {result:?}");
+                        }
+
+                        // Delete temporary files
+                        match std::fs::remove_file(generated_html_inner_box) {
+                            Ok(()) => {}
+                            Err(err) => {
+                                eprintln!("Could not remove temporary generated HTML file: {:?}", err);
+                            }
+                        }
+
+                        // Delete temporary files
+                        match std::fs::remove_file(generated_docx_inner_box) {
+                            Ok(()) => {}
+                            Err(err) => {
+                                println!("Could not remove temporary generated DOCX file: {:?}", err);
+                            }
+                        }
+
+                        // Give answer to the frontend from here
+                        app_handle_inner_box.emit("pdfCreationFinishedWindows", PdfCreationResponseWin { operation_succeeded: success }).unwrap();
+
+                        Ok(())
+                    }));
+
+                    // Print
+                    core_webview_7.PrintToPdf(out_pcwstr, &print_settings, &print_event_handler).unwrap();
+
+                    Ok(())
+                }));
+
+                // Navigate
+                core_webview.add_NavigationCompleted(&navigation_event_handler, std::ptr::from_mut(&mut event_token) as _).unwrap();
+                core_webview.Navigate(pwstr_from_str(format!("file://{}", html_file_path.to_str().unwrap()).as_str())).unwrap();
+
+            }
+
+        }
+
+        return ApplicationError::WaitingForWindowsPDFResult;
 
     }
 

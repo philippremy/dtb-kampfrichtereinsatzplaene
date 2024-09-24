@@ -586,10 +586,11 @@ async fn sync_to_backend_and_create_docx(
 }
 
 #[tauri::command]
-async fn sync_to_backend_and_create_pdf(
+fn sync_to_backend_and_create_pdf(
     frontendstorage: FrontendStorage,
     filepath: String,
     storage: State<'_, Storage>,
+    app_handle: AppHandle
 ) -> Result<ApplicationError, ()> {
     match storage.wk_name.lock() {
         Ok(mut guard) => {
@@ -687,26 +688,8 @@ async fn sync_to_backend_and_create_pdf(
     let generated_docx = filepath.clone().replace(".pdf", "_temp.docx");
 
     // Get the shared PDF View
-    let platform_webview = PLATFORM_WEBVIEW.lock().await;
-    let errno = platform_webview.print_pdf(PathBuf::from(generated_html.clone()), PathBuf::from(filepath.clone()));
-
-    // Delete temporary files
-    match std::fs::remove_file(generated_html) {
-        Ok(()) => {}
-        Err(err) => {
-            eprintln!("Could not remove temporary generated HTML file: {:?}", err);
-            return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed);
-        }
-    }
-
-    // Delete temporary files
-    match std::fs::remove_file(generated_docx) {
-        Ok(()) => {}
-        Err(err) => {
-            println!("Could not remove temporary generated DOCX file: {:?}", err);
-            return Ok(ApplicationError::RemovalOfTemporaryGeneratedFilesFailed);
-        }
-    }
+    let platform_webview = PLATFORM_WEBVIEW.blocking_lock();
+    let errno = platform_webview.print_pdf(PathBuf::from(generated_html.clone()), PathBuf::from(filepath.clone()), app_handle, generated_docx, generated_html);
 
     if errno != ApplicationError::NoError {
         return Ok(errno);

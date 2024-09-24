@@ -75,6 +75,7 @@ pub enum ApplicationError {
     SMTPConnectionError = 29,
     MessageSendError = 30,
     TauriExistingWindowNotFoundError = 31,
+    WaitingForWindowsPDFResult = 32
 }
 
 #[derive(Serialize, Deserialize, Clone)]
