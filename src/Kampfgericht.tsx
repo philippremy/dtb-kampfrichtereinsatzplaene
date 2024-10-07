@@ -311,12 +311,18 @@ class KampfgerichtElement extends React.Component<{storage: FrontendStorage, set
     duplicateSelf() {
         for(const table of this.props.storage.wk_judgingtables!) {
             if(table[0] === this.props.uniqueID) {
-                const duplicatedTable = Object.assign({}, table);
-                duplicatedTable[0] = uuidv4().toString();
-                let temp_storage = this.props.storage;
-                temp_storage.wk_judgingtables?.set(duplicatedTable[0], duplicatedTable[1]);
+                const uuid = uuidv4().toString();
+                let kampfgericht: Kampfgericht = {
+                    uniqueID: uuid,
+                    table_name: table[1].table_name,
+                    table_kind: table[1].table_kind,
+                    table_is_finale: table[1].table_is_finale,
+                    judges: new Map(table[1].judges),
+                };
+                let temp_storage = Object.assign({}, this.props.storage);
+                temp_storage.wk_judgingtables?.set(uuid, kampfgericht);
                 temp_storage.changedByDoubleHook = false;
-                this.props.setStorage(Object.assign({}, temp_storage));
+                this.props.setStorage(temp_storage);
             }
         }
     }  

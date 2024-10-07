@@ -45,6 +45,10 @@
 - [x] Generate PDFs using Tauri's Webview Environment
 - [x] Implement custom About menu using a WebView window --> Enables this functionality on Windows
 
+### To-Do's for 1.3.0
+- [x] Update to Tauri v2.0.0 stable
+- [x] Fix duplicate keys issue in React when copying judging tables
+
 ### To-Do's for 1.X.0
 - [ ] Implement missing menus
 - [ ] Refactor frontend syncing, so we don't have x million loc for the same thing. Makes compiling slow and we could just #[inline(always)] this
