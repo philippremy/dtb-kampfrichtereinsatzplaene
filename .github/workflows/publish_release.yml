@@ -40,6 +40,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.81.0
+          targets: ${{ matrix.args }}
 
       - name: Install Node dependencies (npm)
         run: npm install # change this to npm, pnpm or bun depending on which one you use.
