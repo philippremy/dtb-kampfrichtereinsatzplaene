@@ -352,6 +352,10 @@ fn main() {
         build_shared_library_dir.to_str().unwrap()
     );
 
+    // On macOS, use newer, faster linker
+    #[cfg(target_os = "macos")]
+    println!("cargo:rustc-link-arg=-ld_new");
+
     // Build Tauri normally
     tauri_build::build();
 }
