@@ -1,6 +1,7 @@
 #![allow(unused_imports)]
 
 use std::path::PathBuf;
+use objc2::AllocAnyThread;
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 
