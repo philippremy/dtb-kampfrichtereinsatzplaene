@@ -42,7 +42,7 @@ jobs:
       - name: Install Rust Stable
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.81.0
+          toolchain: 1.89.0
           targets: ${{ matrix.target }}
 
       - name: Install Node dependencies (npm)
