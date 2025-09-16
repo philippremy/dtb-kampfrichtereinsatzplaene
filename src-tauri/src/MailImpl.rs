@@ -1,6 +1,6 @@
 use crate::types::ApplicationError;
 use crate::{
-    APP_VERSION, GIT_BRANCH, GIT_COMMIT, LLVM_VER, STDERR_FILE, STDOUT_FILE, TARGET_TRIPLE,
+    APP_VERSION, LLVM_VER, STDERR_FILE, STDOUT_FILE, TARGET_TRIPLE,
 };
 use mail_builder::MessageBuilder;
 use mail_send::SmtpClientBuilder;
@@ -35,11 +35,11 @@ impl MessageKind {
 
     fn generate_mail_heading(&self) -> String {
         return match self {
-            MessageKind::Bug(bug_desc) => format!("<h3>[BUG]: {}</h3><h4>DTB Kampfrichtereinsatzpläne v{APP_VERSION}</h4><p>[COMMIT]: {GIT_BRANCH}-{GIT_COMMIT}<br />[TARGET_TRIPLE]: {TARGET_TRIPLE}<br />[LLVM]: LLVM {LLVM_VER}<br /></p>", bug_desc).to_string(),
-            MessageKind::Feedback(feedback_desc) => format!("<h3>[FEEDBACK]: {}</h3><h4>DTB Kampfrichtereinsatzpläne v{APP_VERSION}</h4><p>[COMMIT]: {GIT_BRANCH}-{GIT_COMMIT}<br />[TARGET_TRIPLE]: {TARGET_TRIPLE}<br />[LLVM]: LLVM {LLVM_VER}<br /></p>", feedback_desc).to_string(),
-            MessageKind::Support(support_desc) => format!("<h3>[SUPPORT]: {}</h3><h4>DTB Kampfrichtereinsatzpläne v{APP_VERSION}</h4><p>[COMMIT]: {GIT_BRANCH}-{GIT_COMMIT}<br />[TARGET_TRIPLE]: {TARGET_TRIPLE}<br />[LLVM]: LLVM {LLVM_VER}<br /></p>", support_desc).to_string(),
-            MessageKind::Panic(panic_desc) => format!("<h3>[PANIC]: {}</h3><h4>DTB Kampfrichtereinsatzpläne v{APP_VERSION}</h4><p>[COMMIT]: {GIT_BRANCH}-{GIT_COMMIT}<br />[TARGET_TRIPLE]: {TARGET_TRIPLE}<br />[LLVM]: LLVM {LLVM_VER}<br /></p>", panic_desc.0).to_string(),
-            MessageKind::Unknown => format!("<h3>[UNKNOWN]</h3><h4>DTB Kampfrichtereinsatzpläne v{APP_VERSION}</h4><p>[COMMIT]: {GIT_BRANCH}-{GIT_COMMIT}<br />[TARGET_TRIPLE]: {TARGET_TRIPLE}<br />[LLVM]: LLVM {LLVM_VER}<br /></p>").to_string(),
+            MessageKind::Bug(bug_desc) => format!("<h3>[BUG]: {}</h3><h4>DTB Kampfrichtereinsatzpläne v{APP_VERSION}</h4><p>[TARGET_TRIPLE]: {TARGET_TRIPLE}<br />[LLVM]: LLVM {LLVM_VER}<br /></p>", bug_desc).to_string(),
+            MessageKind::Feedback(feedback_desc) => format!("<h3>[FEEDBACK]: {}</h3><h4>DTB Kampfrichtereinsatzpläne v{APP_VERSION}</h4><p>[TARGET_TRIPLE]: {TARGET_TRIPLE}<br />[LLVM]: LLVM {LLVM_VER}<br /></p>", feedback_desc).to_string(),
+            MessageKind::Support(support_desc) => format!("<h3>[SUPPORT]: {}</h3><h4>DTB Kampfrichtereinsatzpläne v{APP_VERSION}</h4><p>[TARGET_TRIPLE]: {TARGET_TRIPLE}<br />[LLVM]: LLVM {LLVM_VER}<br /></p>", support_desc).to_string(),
+            MessageKind::Panic(panic_desc) => format!("<h3>[PANIC]: {}</h3><h4>DTB Kampfrichtereinsatzpläne v{APP_VERSION}</h4><p>[TARGET_TRIPLE]: {TARGET_TRIPLE}<br />[LLVM]: LLVM {LLVM_VER}<br /></p>", panic_desc.0).to_string(),
+            MessageKind::Unknown => format!("<h3>[UNKNOWN]</h3><h4>DTB Kampfrichtereinsatzpläne v{APP_VERSION}</h4><p>[TARGET_TRIPLE]: {TARGET_TRIPLE}<br />[LLVM]: LLVM {LLVM_VER}<br /></p>").to_string(),
         };
     }
 }

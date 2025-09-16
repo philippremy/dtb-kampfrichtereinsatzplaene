@@ -5,20 +5,21 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{exit, Command};
-use vergen::EmitBuilder;
+use vergen::{BuildBuilder, CargoBuilder, Emitter, RustcBuilder, SysinfoBuilder};
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Let vergen do its thing
-    EmitBuilder::builder()
-        .all_build()
-        .git_sha(true)
-        .git_branch()
-        .all_cargo()
-        .all_rustc()
-        .all_sysinfo()
-        .fail_on_error()
-        .emit()
-        .unwrap();
+    let build = BuildBuilder::all_build()?;
+    let cargo = CargoBuilder::all_cargo()?;
+    let rustc = RustcBuilder::all_rustc()?;
+    let si = SysinfoBuilder::all_sysinfo()?;
+
+    Emitter::default()
+        .add_instructions(&build)?
+        .add_instructions(&cargo)?
+        .add_instructions(&rustc)?
+        .add_instructions(&si)?
+        .emit()?;
 
     // Get Working Dir from Environment Variable {CARGO_MANIFEST_DIR}
     let manifest_dir = match std::env::var("CARGO_MANIFEST_DIR") {
@@ -358,4 +359,6 @@ fn main() {
 
     // Build Tauri normally
     tauri_build::build();
+
+    Ok(())
 }

@@ -1,6 +1,7 @@
 #![allow(unused_imports)]
 
 use std::path::PathBuf;
+use objc2::AllocAnyThread;
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 
@@ -106,7 +107,6 @@ impl PlatformWebViewWrapper {
         use tauri::Emitter;
         use windows_core::Interface;
         use webview2_com::{pwstr_from_str, Microsoft::Web::WebView2::Win32::{ICoreWebView2Environment6, ICoreWebView2_2, ICoreWebView2_7}, NavigationCompletedEventHandler, PrintToPdfCompletedHandler};
-        use windows::Win32::System::WinRT::EventRegistrationToken;
 
         unsafe {
 
@@ -123,12 +123,12 @@ impl PlatformWebViewWrapper {
                 let webview_enviornment_6: ICoreWebView2Environment6 = webview_environment.cast::<ICoreWebView2Environment6>().unwrap();
 
                 // Navigate to the local HTML
-                let mut event_token: windows::Win32::System::WinRT::EventRegistrationToken = EventRegistrationToken { value: 0 };
+                let mut event_token = 0i64;
                 let navigation_event_handler = NavigationCompletedEventHandler::create(Box::new(move |_, _| {
 
                     // Continue in here, the completion handler runs on the same thread
                     // and waiting atomically will cause a deadlock
-                
+
                     // Generate PDF Printing Options
                     let print_settings = webview_enviornment_6.CreatePrintSettings().unwrap();
                     print_settings.SetMarginBottom(0.0).unwrap();
