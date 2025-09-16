@@ -62,7 +62,7 @@ export default function Licenses() {
                 <Accordion collapsible={true} multiple={true}>
                     <AccordionItem value={"Tauri"}>
                         <AccordionHeader icon={<WindowMultipleFilled/>}>
-                            <div className={"description"}><p><b>Tauri (Framework)</b></p><p>v2.0.0</p><p><i>(MIT)</i>
+                            <div className={"description"}><p><b>Tauri (Framework)</b></p><p>v2</p><p><i>(MIT)</i>
                             </p>
                                 <div className={"filler"}/>
                                 <Button appearance={"transparent"} icon={<FaGithub/>}
