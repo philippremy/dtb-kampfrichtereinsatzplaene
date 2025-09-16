@@ -124,14 +124,14 @@ pub fn activateLogging() -> Result<(), ApplicationError> {
         mem::forget(stderr_file);
 
         // Now change the file handles and call it day.
-        match SetStdHandle(STD_OUTPUT_HANDLE, HANDLE(stdout_file_fh as isize)) {
+        match SetStdHandle(STD_OUTPUT_HANDLE, HANDLE(stdout_file_fh.into())) {
             Ok(()) => {}
             Err(err) => {
                 eprintln!("errno: {:?}", err);
                 return Err(ApplicationError::LibcDup2StdOutError);
             }
         }
-        match SetStdHandle(STD_ERROR_HANDLE, HANDLE(stderr_file_fh as isize)) {
+        match SetStdHandle(STD_ERROR_HANDLE, HANDLE(stderr_file_fh.into())) {
             Ok(()) => {}
             Err(err) => {
                 eprintln!("errno: {:?}", err);

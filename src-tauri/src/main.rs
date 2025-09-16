@@ -38,8 +38,6 @@ unsafe impl Send for PlatformWebViewWrapper {}
 static mut SAVE_PATH: Option<String> = None;
 static LLVM_VER: &'static str = env!("VERGEN_RUSTC_LLVM_VERSION");
 static TARGET_TRIPLE: &'static str = env!("VERGEN_CARGO_TARGET_TRIPLE");
-static GIT_COMMIT: &'static str = env!("VERGEN_GIT_SHA");
-static GIT_BRANCH: &'static str = env!("VERGEN_GIT_BRANCH");
 static APP_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 static mut STDOUT_FILE: Option<String> = None;
 static mut STDERR_FILE: Option<String> = None;
