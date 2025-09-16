@@ -16,6 +16,7 @@ impl PlatformWebViewWrapper {
         use objc2_app_kit::{NSPrintInfo, NSPrintJobDisposition, NSPrintJobSavingURL, NSPrintSaveJob};
         use objc2_foundation::{NSMutableDictionary, NSString, NSURL};
         use objc2_web_kit::WKWebView;
+        use objc2::AllocAnyThread;
 
         unsafe {
             if let Some(platform_webview) = &self.inner {
